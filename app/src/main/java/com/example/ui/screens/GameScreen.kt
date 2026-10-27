@@ -1,5 +1,10 @@
 package com.example.ui.screens
 
+import android.app.Activity
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.platform.LocalContext
+import com.example.ads.AdMobBannerView
+import com.example.ads.AdMobManager
 import android.graphics.Paint
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.*
@@ -38,9 +43,13 @@ import com.example.ui.components.PrincessRescueCelebrationDialog
 fun GameScreen(
     engine: BenPlatformerEngine,
     world: WorldTheme,
+    adMobManager: AdMobManager? = null,
     onReturnToDashboard: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val activity = context as? Activity
+
     BackHandler {
         onReturnToDashboard()
     }
@@ -363,18 +372,44 @@ fun GameScreen(
             onRunChange = { engine.setRunInput(it) }
         )
 
-        // --- GAME OVER DIALOG ---
+        // --- IN-GAME BOTTOM ADMOB BANNER (CONNECTED TO pub-9786472984542330 / Unit 6300978111) ---
+        if (adMobManager != null) {
+            val bannerId by adMobManager.bannerId.collectAsState()
+            val bannerEnabled by adMobManager.bannerEnabled.collectAsState()
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth(0.50f)
+                    .padding(bottom = 6.dp)
+            ) {
+                AdMobBannerView(
+                    adUnitId = bannerId,
+                    isEnabled = bannerEnabled,
+                    onStatusChange = { adMobManager.updateBannerStatus(it) }
+                )
+            }
+        }
+
+        // --- GAME OVER DIALOG (WITH INTERSTITIAL AD TRIGGER) ---
         if (engine.isGameOver) {
             AdventureGameOverDialog(
                 score = player.score,
                 coins = player.coins,
                 distanceMeters = player.distanceMeters,
-                onRestart = { engine.startAdventure(world) },
+                onRestart = {
+                    if (adMobManager != null && activity != null) {
+                        adMobManager.showInterstitial(activity) {
+                            engine.startAdventure(world)
+                        }
+                    } else {
+                        engine.startAdventure(world)
+                    }
+                },
                 onReturnToDashboard = onReturnToDashboard
             )
         }
 
-        // --- VICTORY CELEBRATION DIALOG ---
+        // --- VICTORY CELEBRATION DIALOG (WITH INTERSTITIAL AD TRIGGER) ---
         if (engine.isVictory) {
             PrincessRescueCelebrationDialog(
                 score = player.score,
@@ -384,7 +419,13 @@ fun GameScreen(
                 onContinueNextIsland = {
                     val nextWorldIndex = (world.ordinal + 1) % WorldTheme.values().size
                     val nextWorld = WorldTheme.values()[nextWorldIndex]
-                    engine.startAdventure(nextWorld)
+                    if (adMobManager != null && activity != null) {
+                        adMobManager.showInterstitial(activity) {
+                            engine.startAdventure(nextWorld)
+                        }
+                    } else {
+                        engine.startAdventure(nextWorld)
+                    }
                 },
                 onReturnToDashboard = onReturnToDashboard
             )

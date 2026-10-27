@@ -117,6 +117,7 @@ fun AppNavigation(
             GameScreen(
                 engine = viewModel.engine,
                 world = selectedWorld,
+                adMobManager = viewModel.adMobManager,
                 onReturnToDashboard = {
                     viewModel.onGameFinishedSaveData()
                     viewModel.adMobManager.showInterstitial(activity) {

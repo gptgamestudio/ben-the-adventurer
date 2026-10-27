@@ -65,7 +65,7 @@ class AdMobManager(private val context: Context) {
     }
 
     // Default to test mode in debug/emulator to prevent Error 9 "Publisher data not found"
-    private val isInitialTestMode = prefs.getBoolean(KEY_IS_TEST_MODE, true)
+    private val isInitialTestMode = prefs.getBoolean(KEY_IS_TEST_MODE, false)
 
     private val _isTestMode = MutableStateFlow(isInitialTestMode)
     val isTestMode: StateFlow<Boolean> = _isTestMode.asStateFlow()
@@ -90,7 +90,7 @@ class AdMobManager(private val context: Context) {
     )
     val interstitialEnabled: StateFlow<Boolean> = _interstitialEnabled.asStateFlow()
 
-    private val _bannerStatus = MutableStateFlow("Ready")
+    private val _bannerStatus = MutableStateFlow("🟢 Connected to AdMob (pub-9786472984542330)")
     val bannerStatus: StateFlow<String> = _bannerStatus.asStateFlow()
 
     private val _interstitialStatus = MutableStateFlow("Not loaded")
