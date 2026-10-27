@@ -28,8 +28,8 @@ class AdMobManager(private val context: Context) {
         const val GOOGLE_AUTHORITY_ID = "f08c47fec0942fa0"
 
         // Production Real Ad Unit IDs (bound to publisher account pub-9786472984542330)
-        const val DEFAULT_BANNER_PROD_ID = "ca-app-pub-9786472984542330/6300978111"
-        const val DEFAULT_INTERSTITIAL_PROD_ID = "ca-app-pub-9786472984542330/6300978111"
+        const val DEFAULT_BANNER_PROD_ID = "ca-app-pub-9786472984542330/5439965215"
+        const val DEFAULT_INTERSTITIAL_PROD_ID = "ca-app-pub-9786472984542330/1427823151"
 
         // Official Google Sample Fallbacks (guaranteed to load on emulators and preview builds)
         const val DEFAULT_BANNER_TEST_ID = "ca-app-pub-3940256099942544/6300978111"
@@ -48,7 +48,7 @@ class AdMobManager(private val context: Context) {
     // Clean migration check for old placeholder dummy IDs
     private fun getSanitizedInitialBanner(): String {
         val saved = prefs.getString(KEY_BANNER_ID, null)
-        return if (saved.isNullOrBlank() || saved.contains("1234567890")) {
+        return if (saved.isNullOrBlank() || saved.contains("1234567890") || saved.contains("6300978111")) {
             DEFAULT_BANNER_PROD_ID
         } else {
             saved
@@ -57,7 +57,7 @@ class AdMobManager(private val context: Context) {
 
     private fun getSanitizedInitialInterstitial(): String {
         val saved = prefs.getString(KEY_INTERSTITIAL_ID, null)
-        return if (saved.isNullOrBlank() || saved.contains("0987654321")) {
+        return if (saved.isNullOrBlank() || saved.contains("0987654321") || saved.contains("6300978111")) {
             DEFAULT_INTERSTITIAL_PROD_ID
         } else {
             saved

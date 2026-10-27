@@ -45,7 +45,8 @@ fun GameScreen(
     world: WorldTheme,
     adMobManager: AdMobManager? = null,
     onReturnToDashboard: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onWorldChange: ((WorldTheme) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
@@ -397,12 +398,13 @@ fun GameScreen(
                 coins = player.coins,
                 distanceMeters = player.distanceMeters,
                 onRestart = {
+                    val currentIsland = engine.currentWorld
                     if (adMobManager != null && activity != null) {
                         adMobManager.showInterstitial(activity) {
-                            engine.startAdventure(world)
+                            engine.startAdventure(currentIsland)
                         }
                     } else {
-                        engine.startAdventure(world)
+                        engine.startAdventure(currentIsland)
                     }
                 },
                 onReturnToDashboard = onReturnToDashboard
@@ -417,8 +419,9 @@ fun GameScreen(
                 levelPlayTimeSeconds = engine.levelPlayTimeSeconds,
                 isOneHourAchieved = engine.hasAwardedOneHourMilestone,
                 onContinueNextIsland = {
-                    val nextWorldIndex = (world.ordinal + 1) % WorldTheme.values().size
+                    val nextWorldIndex = (engine.currentWorld.ordinal + 1) % WorldTheme.values().size
                     val nextWorld = WorldTheme.values()[nextWorldIndex]
+                    onWorldChange?.invoke(nextWorld)
                     if (adMobManager != null && activity != null) {
                         adMobManager.showInterstitial(activity) {
                             engine.startAdventure(nextWorld)
