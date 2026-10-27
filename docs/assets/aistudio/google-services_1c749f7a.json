@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "368887314668",
+    "project_id": "super-tank-online",
+    "storage_bucket": "super-tank-online.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:368887314668:android:6d799d01664cbd59cfcdc9",
+        "android_client_info": {
+          "package_name": "com.gptgamestudio.bentheadventurer"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "368887314668-oumbf8njfcsch1vfvuoen2fg61vkqqs4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.gptgamestudio.bentheadventurer",
+            "certificate_hash": "9ae1f74bc78d0a5a147ba4ba8030e842b2f9cf39"
+          }
+        },
+        {
+          "client_id": "368887314668-rkhmq3tqhnpgnaefhscdf9pml0p4vh9i.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCuwCzTKNDl5LMPizp-LYrix0U91GcBS6Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "368887314668-rkhmq3tqhnpgnaefhscdf9pml0p4vh9i.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,2861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Ben The Adventurer: Island Rescue</title>
+  <link rel="icon" type="image/png" href="/app-icon.png">
+  <!-- Google AdMob Official Publisher Integration -->
+  <meta name="google-adsense-account" content="ca-pub-9786472984542330">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9786472984542330" crossorigin="anonymous"></script>
+  <!-- Firebase & Cloud Firestore Web SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      margin: 0;
+      padding: 0;
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      background-color: #051020;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    #game-container {
+      position: relative;
+      width: 100vw;
+      height: 100dvh;
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      background: #0b192c;
+      overflow: hidden;
+    }
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100dvh;
+      display: block;
+      z-index: 1;
+    }
+
+    /* Top Status Bar / HUD Overlay (Notch-safe, Top-Centered, Semi-Transparent Dark) */
+    .top-hud {
+      position: absolute;
+      top: max(8px, env(safe-area-inset-top));
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 25;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      background: rgba(4, 15, 30, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(0, 240, 255, 0.35);
+      padding: 5px 14px;
+      border-radius: 18px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.65), 0 0 10px rgba(0, 240, 255, 0.2);
+      pointer-events: auto;
+      max-width: 96vw;
+    }
+    .hud-item {
+      color: #fff;
+      font-size: 11px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+    .hud-apk-link {
+      color: #4ade80;
+      text-decoration: none;
+      font-size: 10px;
+      font-weight: 900;
+      background: #064e3b;
+      padding: 2px 7px;
+      border-radius: 10px;
+      border: 1px solid #10b981;
+      pointer-events: auto;
+      transition: transform 0.1s;
+    }
+    .hud-apk-link:active {
+      transform: scale(0.95);
+    }
+
+    /* Bottom Control Overlay Layer (Gesture-bar safe) */
+    .bottom-ui-panel {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      padding-bottom: max(6px, env(safe-area-inset-bottom));
+      pointer-events: none;
+    }
+
+    /* Touch Controls Row (Safe area inset aware) */
+    .bottom-controls {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      padding-left: max(16px, env(safe-area-inset-left));
+      padding-right: max(16px, env(safe-area-inset-right));
+      padding-bottom: 2px;
+      pointer-events: none;
+      align-items: flex-end;
+    }
+
+    /* Left Single Movement Pad (Atras-Abante) */
+    .single-move-pad {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,240,255,0.25) 0%, rgba(13,27,42,0.85) 100%);
+      border: 2px solid #00f0ff;
+      pointer-events: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 10px;
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+      cursor: pointer;
+      touch-action: none;
+      transition: transform 0.05s;
+    }
+    .single-move-pad:active {
+      transform: scale(0.95);
+    }
+    .pad-arrow {
+      color: #00f0ff;
+      font-size: 16px;
+      font-weight: bold;
+      opacity: 0.85;
+      pointer-events: none;
+      transition: transform 0.08s, opacity 0.08s, color 0.08s;
+    }
+    .pad-arrow.active {
+      color: #fde047;
+      opacity: 1;
+      transform: scale(1.3);
+    }
+
+    /* Right Action Buttons (SLIDE, BLAST, JUMP) */
+    .action-group {
+      display: flex;
+      gap: 8px;
+      pointer-events: auto;
+      align-items: center;
+    }
+    .btn-action {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      font-weight: 900;
+      color: #fff;
+      font-size: 10px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.6);
+      touch-action: none;
+      transition: transform 0.05s;
+    }
+    .btn-action:active, .btn-action.active {
+      transform: scale(0.92);
+    }
+    .btn-slide {
+      background: radial-gradient(circle, #0284c7, #075985);
+      border: 2px solid #38bdf8;
+    }
+    .btn-blast {
+      background: radial-gradient(circle, #805ad5, #44337a);
+      border: 2px solid #b794f4;
+    }
+    .btn-jump {
+      background: radial-gradient(circle, #e53e3e, #9b2c2c);
+      border: 2px solid #feb2b2;
+    }
+
+    /* AdMob Banner sa Pinakailalim */
+    .admob-banner {
+      width: 96%;
+      max-width: 480px;
+      height: 26px;
+      background: #020b18;
+      border: 1px solid #1a3d66;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      color: #7aa2cf;
+      font-size: 10px;
+      pointer-events: auto;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .admob-banner:hover {
+      background: #0a192f;
+    }
+    .ad-tag {
+      background: #f1a80a;
+      color: #000;
+      font-weight: 900;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 9px;
+    }
+
+    /* Start / Game Over / Victory Screens */
+    .screen-overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(3, 10, 20, 0.96);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #fff;
+      text-align: center;
+      padding: 20px 16px;
+      overflow-y: auto !important;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y !important;
+    }
+
+    /* Start Screen / Main Dashboard: Fully Movable & Scrollable Up and Down */
+    #startScreen {
+      justify-content: flex-start;
+      padding: 16px 12px 90px 12px;
+      scroll-behavior: smooth;
+    }
+    #startScreen::-webkit-scrollbar {
+      width: 6px;
+    }
+    #startScreen::-webkit-scrollbar-thumb {
+      background: #00f0ff;
+      border-radius: 4px;
+    }
+
+    .dashboard-container {
+      width: 100%;
+      max-width: 440px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Auth Card Styles */
+    .auth-card {
+      width: 100%;
+      background: rgba(13, 27, 42, 0.95);
+      border: 1.5px solid #00f0ff;
+      border-radius: 16px;
+      padding: 14px 16px;
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.25);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      text-align: left;
+    }
+    .auth-tabs {
+      display: flex;
+      gap: 8px;
+      background: #051020;
+      padding: 4px;
+      border-radius: 10px;
+      border: 1px solid #1e293b;
+    }
+    .auth-tab-btn {
+      flex: 1;
+      padding: 7px 0;
+      font-size: 12px;
+      font-weight: bold;
+      border: none;
+      background: transparent;
+      color: #94a3b8;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .auth-tab-btn.active {
+      background: #00f0ff;
+      color: #030a14;
+      box-shadow: 0 0 10px rgba(0,240,255,0.4);
+    }
+    .input-field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .input-field-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #7dd3fc;
+    }
+    .auth-input {
+      width: 100%;
+      height: 40px;
+      background: #061527;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 0 12px;
+      color: #fff;
+      font-size: 13px;
+      outline: none;
+      user-select: text !important;
+      -webkit-user-select: text !important;
+      transition: border-color 0.2s;
+    }
+    .auth-input:focus {
+      border-color: #00f0ff;
+      box-shadow: 0 0 8px rgba(0,240,255,0.3);
+    }
+    .password-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+    .password-wrapper .auth-input {
+      padding-right: 80px;
+    }
+    .btn-toggle-pw {
+      position: absolute;
+      right: 6px;
+      height: 30px;
+      padding: 0 10px;
+      background: #1e293b;
+      border: 1px solid #475569;
+      border-radius: 6px;
+      color: #38bdf8;
+      font-size: 11px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .btn-toggle-pw:hover, .btn-toggle-pw:active {
+      background: #334155;
+      color: #fff;
+    }
+    .btn-auth-submit {
+      width: 100%;
+      height: 42px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(45deg, #0284c7, #00f0ff);
+      color: #030a14;
+      font-weight: 900;
+      font-size: 13px;
+      cursor: pointer;
+      box-shadow: 0 0 12px rgba(0,240,255,0.3);
+      transition: transform 0.1s;
+    }
+    .btn-auth-submit:active {
+      transform: scale(0.98);
+    }
+    .btn-google-auth {
+      width: 100%;
+      height: 38px;
+      border: 1px solid #475569;
+      border-radius: 10px;
+      background: #0f172a;
+      color: #f8fafc;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.15s;
+    }
+    .btn-google-auth:hover {
+      background: #1e293b;
+    }
+    .auth-status-msg {
+      font-size: 11px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      display: none;
+      line-height: 1.4;
+    }
+    .auth-status-msg.error {
+      display: block;
+      background: rgba(239,68,68,0.2);
+      border: 1px solid #ef4444;
+      color: #fca5a5;
+    }
+    .auth-status-msg.success {
+      display: block;
+      background: rgba(34,197,94,0.2);
+      border: 1px solid #22c55e;
+      color: #86efac;
+    }
+
+    /* Active Session Card (Auto Logged In) */
+    .session-badge-card {
+      width: 100%;
+      background: linear-gradient(135deg, rgba(6,78,59,0.85) 0%, rgba(15,23,42,0.95) 100%);
+      border: 1.5px solid #10b981;
+      border-radius: 14px;
+      padding: 12px 14px;
+      box-shadow: 0 0 15px rgba(16,185,129,0.3);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      text-align: left;
+    }
+    .session-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .btn-signout {
+      background: #1e293b;
+      border: 1px solid #475569;
+      color: #94a3b8;
+      font-size: 10px;
+      font-weight: bold;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .btn-signout:hover {
+      background: #334155;
+      color: #fff;
+    }
+
+    .btn-start {
+      margin-top: 10px;
+      padding: 13px 36px;
+      background: linear-gradient(45deg, #00f0ff, #0066ff);
+      border: none;
+      border-radius: 30px;
+      color: #fff;
+      font-size: 17px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 0 20px #00f0ff;
+      transition: transform 0.1s;
+    }
+    .btn-start:active {
+      transform: scale(0.95);
+    }
+  
+    /* HUD Buttons (Sound toggle, Watch Ad, etc.) */
+    .hud-btn {
+      background: rgba(0, 240, 255, 0.15);
+      border: 1px solid rgba(0, 240, 255, 0.4);
+      border-radius: 6px;
+      cursor: pointer;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+      touch-action: manipulation;
+    }
+    .hud-btn:active {
+      transform: scale(0.94);
+      background: rgba(0, 240, 255, 0.3);
+    }
+    .hud-ad-btn {
+      background: rgba(241, 168, 10, 0.22);
+      border-color: #f1a80a;
+      color: #fde047;
+    }
+    .hud-ad-btn:active {
+      background: rgba(241, 168, 10, 0.45);
+    }
+
+    /* AdMob Responsive Banner Styling */
+    .admob-banner {
+      width: 96%;
+      max-width: 480px;
+      min-height: 50px;
+      background: #020b18;
+      border: 1px solid #1a3d66;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      padding: 4px 10px;
+      color: #7aa2cf;
+      font-size: 11px;
+      pointer-events: auto;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+      margin-top: 4px;
+    }
+    .admob-banner:hover {
+      background: #0a192f;
+      border-color: #38bdf8;
+    }
+    .admob-fallback-content {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .admob-badge-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .ad-tag {
+      background: #f1a80a;
+      color: #000;
+      font-weight: 900;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 9px;
+      letter-spacing: 0.5px;
+    }
+    .ad-pub-text {
+      color: #fff;
+      font-weight: bold;
+      font-size: 10px;
+    }
+    .admob-ticker {
+      flex: 1;
+      text-align: center;
+      font-size: 11px;
+      color: #00f0ff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding: 0 4px;
+    }
+    .btn-ad-action {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #000;
+      font-weight: 900;
+      font-size: 10px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: transform 0.1s;
+    }
+    .btn-ad-action:active {
+      transform: scale(0.92);
+    }
+
+    /* Interstitial Ad Modal (Full-Screen Overlay) */
+    .interstitial-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(2, 6, 17, 0.94);
+      backdrop-filter: blur(8px);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      animation: fadeIn 0.2s ease-out;
+    }
+    .interstitial-card {
+      background: #0f172a;
+      border: 2px solid #0284c7;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 10px 40px rgba(0, 240, 255, 0.25);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .interstitial-header {
+      background: #020b18;
+      padding: 10px 14px;
+      border-bottom: 1px solid #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .btn-skip-ad {
+      background: #334155;
+      color: #94a3b8;
+      border: 1px solid #475569;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: not-allowed;
+      transition: all 0.2s;
+    }
+    .btn-skip-ad.enabled {
+      background: #ef4444;
+      color: #fff;
+      border-color: #f87171;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+    }
+    .interstitial-body {
+      padding: 20px 18px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .interstitial-sponsor-badge {
+      font-size: 10px;
+      font-weight: 800;
+      color: #38bdf8;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      background: rgba(56, 189, 248, 0.1);
+      padding: 3px 8px;
+      border-radius: 12px;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+    .interstitial-visual-box {
+      width: 100%;
+      background: radial-gradient(circle, rgba(14, 165, 233, 0.15) 0%, rgba(15, 23, 42, 0.6) 100%);
+      border: 1px dashed rgba(56, 189, 248, 0.4);
+      border-radius: 12px;
+      padding: 16px;
+      margin: 12px 0 16px 0;
+    }
+    .interstitial-animated-icon {
+      font-size: 38px;
+      animation: floatHop 1.5s ease-in-out infinite alternate;
+    }
+    @keyframes floatHop {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(-6px); }
+    }
+    .btn-interstitial-cta {
+      width: 100%;
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+      font-weight: 900;
+      font-size: 14px;
+      padding: 12px 0;
+      border-radius: 10px;
+      border: 1px solid #34d399;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+      transition: all 0.15s;
+    }
+    .btn-interstitial-cta:active {
+      transform: scale(0.97);
+    }
+    .btn-ad-revive {
+      width: 100%;
+      max-width: 280px;
+      background: linear-gradient(135deg, #f59e0b, #b45309);
+      color: #fff;
+      font-weight: 900;
+      font-size: 13px;
+      padding: 11px 0;
+      border-radius: 8px;
+      border: 1px solid #fde047;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+      margin: 8px 0;
+      transition: all 0.15s;
+    }
+    .btn-ad-revive:active {
+      transform: scale(0.97);
+    }
+
+  </style>
+</head>
+<body>
+
+<div id="game-container">
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- Top Status Bar / HUD (Notch-safe, Top-Centered, Semi-Transparent Dark) -->
+  <header id="topHud" class="top-hud">
+    <div class="hud-item" id="hudLives">❤️ x10</div>
+    <div class="hud-item">⏱️ <span id="timerText">05:00</span></div>
+    <div class="hud-item" id="hudCoins">🪙 180</div>
+    <div class="hud-item" id="hudLevel">⭐ LVL 1</div>
+    <div class="hud-item" id="hudCloud" style="color:#38bdf8; font-size:10px;">☁️ Firestore: Online</div>
+    <button type="button" class="hud-item hud-btn" id="hudSoundToggle" onclick="toggleAudio()" title="Sound On / Off">🔊 Sound: ON</button>
+    <button type="button" class="hud-item hud-btn hud-ad-btn" onclick="showWebInterstitial('hud')" title="Watch Ad for +100 Coins">🎬 Ad +100🪙</button>
+    <a href="./BenTheAdventurer.apk" download="BenTheAdventurer.apk" class="hud-apk-link" title="Download APK">
+      APK ⬇
+    </a>
+  </header>
+
+  <!-- Start Screen (Movable Up & Down with Gmail Auth & Auto Session Persistence) -->
+  <div id="startScreen" class="screen-overlay">
+    <div class="dashboard-container">
+      <div style="font-size:36px; margin-top:2px;">🌴 🐉 👑</div>
+      <h1 style="color:#00f0ff; text-shadow:0 0 15px #00f0ff; font-size:24px; letter-spacing:1px; line-height:1.2;">BEN THE ADVENTURER</h1>
+      <p style="color:#94a3b8; font-size:12px; margin-top:-4px;">1,000 Levels Mario-Style Adventure &bull; Boss Dragon &bull; Cloud Save</p>
+      
+      <!-- Scroll Indicator: Movable Up and Down -->
+      <div style="background:rgba(0,240,255,0.08); border:1px solid rgba(0,240,255,0.3); border-radius:20px; padding:4px 14px; font-size:11px; color:#38bdf8; display:flex; align-items:center; gap:6px;">
+        <span>↕️</span> <strong>Movable Screen:</strong> <span>I-scroll pataas at pababa ang dashboard</span>
+      </div>
+
+      <!-- ACTIVE SESSION BADGE (Visible kapag naka-log in o na-remember ang user session) -->
+      <div id="activeSessionCard" class="session-badge-card" style="display:none;">
+        <div class="session-row">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:22px;">🛡️</span>
+            <div>
+              <div style="font-size:10px; color:#a7f3d0; text-transform:uppercase; font-weight:800;">Naka-Log in (Auto-Saved Session)</div>
+              <div id="sessionUserEmail" style="font-size:13px; font-weight:900; color:#fff;">player@gmail.com</div>
+            </div>
+          </div>
+          <button type="button" class="btn-signout" onclick="handleSignOut()">Switch / Out</button>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:11px; color:#cbd5e1; background:rgba(0,0,0,0.35); padding:6px 10px; border-radius:8px;">
+          <span>⭐ Level: <strong id="sessionUserLevel" style="color:#fde047;">1</strong> / 1000</span>
+          <span>🪙 Coins: <strong id="sessionUserCoins" style="color:#fde047;">180</strong></span>
+          <span style="color:#4ade80;">☁️ Firestore Online</span>
+        </div>
+      </div>
+
+      <!-- GMAIL SIGN UP & LOG IN CARD (Show/Hide Password + Tab switch) -->
+      <div id="authCard" class="auth-card">
+        <div class="auth-tabs">
+          <button type="button" class="auth-tab-btn active" id="tabLogIn" onclick="switchAuthTab('login')">🔑 LOG IN</button>
+          <button type="button" class="auth-tab-btn" id="tabSignUp" onclick="switchAuthTab('signup')">📝 SIGN UP</button>
+        </div>
+
+        <div id="authAlert" class="auth-status-msg"></div>
+
+        <div class="input-field-group">
+          <label class="input-field-label" for="authEmail">Gmail / Email Address:</label>
+          <input type="email" id="authEmail" class="auth-input" placeholder="ilagay-ang-gmail@gmail.com" autocomplete="email" />
+        </div>
+
+        <div class="input-field-group">
+          <label class="input-field-label" for="authPassword">Password:</label>
+          <div class="password-wrapper">
+            <input type="password" id="authPassword" class="auth-input" placeholder="Password (minimum 6 characters)" autocomplete="current-password" />
+            <button type="button" class="btn-toggle-pw" id="btnTogglePw" onclick="togglePasswordVisibility()" title="Show/Hide Password">
+              <span id="pwEyeIcon">👁️</span> <span id="pwEyeText">Show</span>
+            </button>
+          </div>
+        </div>
+
+        <button type="button" class="btn-auth-submit" id="btnAuthSubmit" onclick="handleAuthSubmit()">LOG IN SA GMAIL</button>
+
+        <button type="button" class="btn-google-auth" onclick="handleGoogleSignIn()">
+          <span>🌐</span> <span>Mag-sign in gamit ang Google Account</span>
+        </button>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; color:#64748b; padding-top:2px;">
+          <span>🔒 Persistent: Hindi na babalik sa login</span>
+          <span>☁️ Auto-sync sa Firestore</span>
+        </div>
+      </div>
+
+      <!-- START BUTTON (PRIMARY GAME LAUNCH) -->
+      <button class="btn-start" onclick="startGame()" style="width:100%; max-width:340px; font-size:18px; padding:15px 0;">
+        ▶ MAGLARO NA (START ADVENTURE)
+      </button>
+
+      <!-- CONTROLS GUIDE -->
+      <div style="width:100%; background:rgba(255,255,255,0.05); padding:10px 14px; border-radius:12px; font-size:11px; color:#cbd5e1; border:1px solid #334155; line-height:1.6; text-align:left;">
+        🕹️ <strong>Controls:</strong> Left Pad ◀ ▶ (Walk) &bull; <strong>SLIDE</strong> (Duck & Dash) &bull; <strong>BLAST</strong> &bull; <strong>JUMP</strong><br>
+        ⌨️ <strong>Keyboard:</strong> A/D to walk &bull; S / Down to Slide &bull; Space / W to Jump &bull; F / Z to Blast<br>
+        🥚 <strong>Hazards:</strong> Iwasan ang mga itlog ng ibon &bull; 🐉 Talunin ang Dragon Boss sa huli!
+      </div>
+
+      <!-- APK DOWNLOAD LINK -->
+      <div style="margin-top:4px;">
+        <a href="./BenTheAdventurer.apk" download="BenTheAdventurer.apk" style="color:#4ade80; text-decoration:none; font-size:12px; font-weight:bold; background:#064e3b; padding:8px 16px; border-radius:20px; border:1px solid #10b981; display:inline-block;">
+          📲 Download Android Native APK (25MB)
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Over Screen -->
+  <div id="gameOverScreen" class="screen-overlay" style="display:none;">
+    <div style="font-size:42px; margin-bottom:8px;">💀 🏝️</div>
+    <h2 style="color:#e53e3e; font-size:30px; text-shadow:0 0 15px #e53e3e;">GAME OVER</h2>
+    <p id="gameOverSubtext" style="color:#cbd5e1; font-size:13px; margin-top:6px;">Ben was caught by the island hazards!</p>
+    <button type="button" class="btn-ad-revive" onclick="showWebInterstitial('revive')">📺 WATCH AD TO REVIVE (+3 HEARTS)</button>
+    <button class="btn-start" onclick="startGame()">PLAY AGAIN</button>
+  </div>
+
+  <!-- Victory Screen -->
+  <div id="victoryScreen" class="screen-overlay" style="display:none;">
+    <div style="font-size:44px; margin-bottom:6px;">👑 🏆 🐉</div>
+    <h2 style="color:#4ade80; font-size:28px; font-weight:900; text-shadow:0 0 20px rgba(74,222,128,0.6);">DRAGON DEFEATED!</h2>
+    <p style="color:#e2e8f0; font-size:14px; margin:8px 0;" id="victorySubtext">Princess Zoe is saved! Level Cleared!</p>
+    <button class="btn-start" style="background:linear-gradient(45deg, #10b981, #059669); box-shadow:0 0 20px #10b981;" onclick="nextLevel()">NEXT LEVEL ➔</button>
+  </div>
+
+  <!-- Bottom Controls & Ad Interface (Movement on Left, Actions on Right, AdMob at Base) -->
+  <div class="bottom-ui-panel">
+    <!-- Controls Row: Movement + SLIDE + BLAST + JUMP -->
+    <div class="bottom-controls">
+      <!-- Single Movement Pad (Atras-Abante) -->
+      <div class="single-move-pad" id="movePad">
+        <span class="pad-arrow" id="arrowLeft">◀</span>
+        <span class="pad-arrow" id="arrowRight">▶</span>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="action-group">
+        <div class="btn-action btn-slide" id="slideBtn" title="Slide / Duck">SLIDE</div>
+        <div class="btn-action btn-blast" id="blastBtn" title="Blast Weapon">BLAST</div>
+        <div class="btn-action btn-jump" id="jumpBtn" title="Jump Platform">JUMP</div>
+      </div>
+    </div>
+
+    <!-- Bottom Ad Banner Space (AdMob pub-9786472984542330 / Unit: 6300978111) -->
+    <div class="admob-banner" id="admobBannerBox" onclick="showWebInterstitial('banner')">
+      <ins class="adsbygoogle"
+           style="display:inline-block;width:320px;height:50px"
+           data-ad-client="ca-pub-9786472984542330"
+           data-ad-slot="6300978111"
+           data-ad-format="horizontal"></ins>
+      <div id="admobFallbackContent" class="admob-fallback-content">
+        <div class="admob-badge-group">
+          <span class="ad-tag">AdMob</span>
+          <span class="ad-pub-text">pub-9786472984542330</span>
+        </div>
+        <div class="admob-ticker">
+          <span id="adRewardText">📺 Sponsored: Watch Ad for +100 Coins &bull; Unit: 6300978111</span>
+        </div>
+        <button type="button" class="btn-ad-action">WATCH AD 🎬</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // =========================================================================
+  // 1. RETRO WEB AUDIO 8-BIT SYNTHESIZER
+  // =========================================================================
+  // =========================================================================
+  // 1. RETRO WEB AUDIO 8-BIT SYNTHESIZER (Audible, Responsive & Mobile-Unlocked)
+  // =========================================================================
+  class RetroAudio {
+    constructor() {
+      this.ctx = null;
+      this.bgmTimer = null;
+      this.step = 0;
+      this.isMuted = false;
+      this.unlocked = false;
+      // Upbeat 8-bit Mario-style melody
+      this.melody = [
+        261.63, 0, 329.63, 392.00, 523.25, 0, 392.00, 0,
+        349.23, 0, 440.00, 523.25, 587.33, 0, 523.25, 0,
+        392.00, 0, 440.00, 0, 493.88, 523.25, 0, 392.00,
+        329.63, 0, 261.63, 0, 293.66, 329.63, 261.63, 0
+      ];
+      this.bassline = [
+        130.81, 0, 130.81, 0, 164.81, 0, 164.81, 0,
+        174.61, 0, 174.61, 0, 196.00, 0, 196.00, 0
+      ];
+    }
+    init() {
+      try {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume().then(() => {
+            this.unlocked = true;
+          }).catch(() => {});
+        } else if (this.ctx && this.ctx.state === 'running') {
+          this.unlocked = true;
+        }
+      } catch (e) {
+        console.warn("AudioContext init error:", e);
+      }
+    }
+    toggleMute() {
+      this.isMuted = !this.isMuted;
+      if (this.isMuted) {
+        this.stopBgm();
+      } else {
+        this.init();
+        if (typeof gameActive !== 'undefined' && gameActive) {
+          this.startBgm();
+        }
+      }
+      return this.isMuted;
+    }
+    tone(freq, type, dur, vol = 0.20) {
+      if (this.isMuted) return;
+      this.init();
+      if (!this.ctx) return;
+      try {
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, now);
+        gain.gain.setValueAtTime(Math.max(0.001, vol), now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + dur + 0.05);
+      } catch (e) {}
+    }
+    jump() {
+      if (this.isMuted) return;
+      this.init();
+      if (!this.ctx) return;
+      try {
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.exponentialRampToValueAtTime(580, now + 0.15);
+        gain.gain.setValueAtTime(0.24, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.16);
+      } catch (e) {}
+    }
+    slide() {
+      if (this.isMuted) return;
+      this.init();
+      if (!this.ctx) return;
+      try {
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.linearRampToValueAtTime(70, now + 0.18);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.19);
+      } catch (e) {}
+    }
+    blast() {
+      if (this.isMuted) return;
+      this.init();
+      if (!this.ctx) return;
+      try {
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.exponentialRampToValueAtTime(180, now + 0.12);
+        gain.gain.setValueAtTime(0.26, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.13);
+      } catch (e) {}
+    }
+    eggDrop() {
+      this.tone(480, 'sine', 0.12, 0.20);
+    }
+    splat() {
+      this.tone(90, 'sawtooth', 0.18, 0.30);
+    }
+    dragonRoar() {
+      if (this.isMuted) return;
+      this.init();
+      if (!this.ctx) return;
+      try {
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(90, now);
+        osc.frequency.linearRampToValueAtTime(45, now + 0.40);
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.40);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.42);
+      } catch (e) {}
+    }
+    coin() {
+      if (this.isMuted) return;
+      this.tone(987.77, 'sine', 0.08, 0.30);
+      setTimeout(() => { if (!this.isMuted) this.tone(1318.51, 'sine', 0.14, 0.30); }, 60);
+    }
+    hit() {
+      if (this.isMuted) return;
+      this.tone(110, 'sawtooth', 0.22, 0.35);
+    }
+    victory() {
+      if (this.isMuted) return;
+      [523.25, 659.25, 783.99, 1046.50, 1318.51].forEach((f, i) => {
+        setTimeout(() => { if (!this.isMuted) this.tone(f, 'triangle', 0.22, 0.30); }, i * 85);
+      });
+    }
+    startBgm() {
+      if (this.isMuted || this.bgmTimer) return;
+      this.init();
+      this.bgmTimer = setInterval(() => {
+        if (!gameActive || this.isMuted) return;
+        const leadNote = this.melody[this.step % this.melody.length];
+        const bassNote = this.bassline[this.step % this.bassline.length];
+        if (leadNote > 0) this.tone(leadNote, 'square', 0.09, 0.13);
+        if (bassNote > 0 && this.step % 2 === 0) this.tone(bassNote, 'triangle', 0.12, 0.12);
+        this.step++;
+      }, 160);
+    }
+    stopBgm() {
+      if (this.bgmTimer) {
+        clearInterval(this.bgmTimer);
+        this.bgmTimer = null;
+      }
+    }
+  }
+  const audio = new RetroAudio();
+
+  // Global user gesture audio unlocker for mobile browsers
+  function unlockGlobalAudio() {
+    audio.init();
+    if (audio.ctx && audio.ctx.state === 'running') {
+      audio.unlocked = true;
+      try {
+        const osc = audio.ctx.createOscillator();
+        const gain = audio.ctx.createGain();
+        gain.gain.value = 0.0001;
+        osc.connect(gain);
+        gain.connect(audio.ctx.destination);
+        osc.start();
+        osc.stop(audio.ctx.currentTime + 0.001);
+      } catch (e) {}
+    }
+    window.removeEventListener('pointerdown', unlockGlobalAudio);
+    window.removeEventListener('touchstart', unlockGlobalAudio);
+    window.removeEventListener('click', unlockGlobalAudio);
+    window.removeEventListener('keydown', unlockGlobalAudio);
+  }
+  window.addEventListener('pointerdown', unlockGlobalAudio, { passive: true });
+  window.addEventListener('touchstart', unlockGlobalAudio, { passive: true });
+  window.addEventListener('click', unlockGlobalAudio, { passive: true });
+  window.addEventListener('keydown', unlockGlobalAudio, { passive: true });
+
+  function toggleAudio() {
+    const isMuted = audio.toggleMute();
+    const btn = document.getElementById('hudSoundToggle');
+    if (btn) {
+      btn.innerText = isMuted ? '🔇 Sound: OFF' : '🔊 Sound: ON';
+      btn.style.color = isMuted ? '#f87171' : '#fff';
+    }
+  }
+
+  // =========================================================================
+  // 2. 1,000 LEVELS PERSISTENCE & FIREBASE FIRESTORE CLOUD SYNC
+  // =========================================================================
+  
+  // =========================================================================
+  // 1B. GOOGLE ADMOB & ADSENSE CONTROLLER (Banner & Interstitial)
+  // =========================================================================
+  let interstitialTimer = null;
+  let interstitialSecondsLeft = 5;
+  let currentAdTrigger = 'banner';
+
+  function showWebInterstitial(trigger = 'banner') {
+    currentAdTrigger = trigger;
+    audio.init();
+    const modal = document.getElementById('interstitialModal');
+    const skipBtn = document.getElementById('btnSkipAd');
+    const titleEl = document.getElementById('interstitialTitle');
+    const descEl = document.getElementById('interstitialDesc');
+    const badgeEl = document.getElementById('interstitialRewardBadge');
+
+    if (trigger === 'revive') {
+      titleEl.innerText = "REVIVE BEN: EXTRA HEARTS 🛡️";
+      descEl.innerText = "Panoorin ang maikling AdMob showcase para mabuhay muli si Ben at makakuha ng +3 Hearts!";
+      badgeEl.innerText = "REWARD: REVIVE +3 HEARTS & +50 COINS";
+    } else if (trigger === 'double_coins') {
+      titleEl.innerText = "VICTORY BONUS: DOUBLE COINS ⭐";
+      descEl.innerText = "Panoorin ang AdMob ad para madoble ang lahat ng nakuha mong coins ngayong Level!";
+      badgeEl.innerText = "REWARD: 2X COINS MULTIPLIER";
+    } else {
+      titleEl.innerText = "BEN THE ADVENTURER: SEASON PASS 🌴";
+      descEl.innerText = "Google AdMob Authorized Publisher pub-9786472984542330 • Ad Unit 6300978111";
+      badgeEl.innerText = "REWARD: +100 GOLD COINS & EXTRA HEART";
+    }
+
+    interstitialSecondsLeft = 5;
+    skipBtn.disabled = true;
+    skipBtn.classList.remove('enabled');
+    skipBtn.innerText = `Skip in ${interstitialSecondsLeft}s`;
+
+    modal.style.display = 'flex';
+
+    if (interstitialTimer) clearInterval(interstitialTimer);
+    interstitialTimer = setInterval(() => {
+      interstitialSecondsLeft--;
+      if (interstitialSecondsLeft > 0) {
+        skipBtn.innerText = `Skip in ${interstitialSecondsLeft}s`;
+      } else {
+        clearInterval(interstitialTimer);
+        interstitialTimer = null;
+        skipBtn.disabled = false;
+        skipBtn.classList.add('enabled');
+        skipBtn.innerText = "Skip Ad ✕";
+      }
+    }, 1000);
+  }
+
+  function closeInterstitialAd() {
+    if (interstitialTimer) {
+      clearInterval(interstitialTimer);
+      interstitialTimer = null;
+    }
+    const modal = document.getElementById('interstitialModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function claimInterstitialReward() {
+    closeInterstitialAd();
+    audio.coin();
+
+    if (currentAdTrigger === 'revive') {
+      lives = Math.max(lives + 3, 5);
+      gameActive = true;
+      document.getElementById('gameOverScreen').style.display = 'none';
+      player.x = Math.max(80, player.x - 100);
+      player.y = groundY - player.height;
+      player.vx = 0;
+      player.vy = 0;
+      player.invulnerable = 120;
+      audio.startBgm();
+      requestAnimationFrame(gameLoop);
+    } else if (currentAdTrigger === 'double_coins') {
+      coins = coins * 2;
+    } else {
+      coins += 100;
+      lives = Math.min(lives + 1, 10);
+    }
+
+    updateHUD();
+    syncToFirestore();
+
+    const bannerText = document.getElementById('adRewardText');
+    if (bannerText) {
+      bannerText.innerText = "Rewarded! +100 Coins ⭐ (Unit: 6300978111)";
+      bannerText.style.color = "#4ade80";
+      setTimeout(() => {
+        bannerText.innerText = "📺 Sponsored: Watch Ad for +100 Coins • Unit: 6300978111";
+        bannerText.style.color = "#00f0ff";
+      }, 4000);
+    }
+  }
+
+  // Auto-initialize Google AdSense banner and handle review fallback
+  window.addEventListener('load', () => {
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch (e) {
+      console.log("AdSense initialized or pending domain approval.");
+    }
+  });
+
+  const SAVE_KEY = 'ben_adventurer_lvl_save';
+  let currentLevel = 1;
+  try {
+    const saved = localStorage.getItem(SAVE_KEY);
+    if (saved && !isNaN(parseInt(saved))) {
+      currentLevel = Math.max(1, Math.min(1000, parseInt(saved)));
+    }
+  } catch(e) {}
+
+  // Firebase Firestore Configuration (Project: super-tank-online)
+  const firebaseConfig = {
+    apiKey: "AIzaSyCuwCzTKNDl5LMPizp-LYrix0U91GcBS6Q",
+    authDomain: "super-tank-online.firebaseapp.com",
+    projectId: "super-tank-online",
+    storageBucket: "super-tank-online.firebasestorage.app",
+    messagingSenderId: "368887314668",
+    appId: "1:368887314668:android:6d799d01664cbd59cfcdc9"
+  };
+
+  let firestoreDb = null;
+  let authService = null;
+  let currentAuthUser = null;
+  let authMode = 'login';
+  const USER_SESSION_KEY = 'ben_active_user_session';
+
+  if (typeof firebase !== 'undefined') {
+    try {
+      if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+      }
+      firestoreDb = firebase.firestore();
+      if (firebase.auth) {
+        authService = firebase.auth();
+        authService.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(err => {
+          console.warn("Auth persistence error:", err);
+        });
+      }
+      console.log("🔥 Connected to Firebase Firestore & Auth: super-tank-online");
+    } catch(e) {
+      console.warn("Firebase initialization notice:", e);
+    }
+  }
+
+  // --- PASSWORD VISIBILITY TOGGLE (Show / Hide Password) ---
+  function togglePasswordVisibility() {
+    const pwInput = document.getElementById('authPassword');
+    const eyeIcon = document.getElementById('pwEyeIcon');
+    const eyeText = document.getElementById('pwEyeText');
+    if (!pwInput) return;
+    if (pwInput.type === 'password') {
+      pwInput.type = 'text';
+      if (eyeIcon) eyeIcon.textContent = '🙈';
+      if (eyeText) eyeText.textContent = 'Hide';
+    } else {
+      pwInput.type = 'password';
+      if (eyeIcon) eyeIcon.textContent = '👁️';
+      if (eyeText) eyeText.textContent = 'Show';
+    }
+  }
+
+  // --- SWITCH AUTH TAB: LOG IN / SIGN UP ---
+  function switchAuthTab(mode) {
+    authMode = mode;
+    const tabLogin = document.getElementById('tabLogIn');
+    const tabSignUp = document.getElementById('tabSignUp');
+    const btnSubmit = document.getElementById('btnAuthSubmit');
+    const alertBox = document.getElementById('authAlert');
+    if (alertBox) {
+      alertBox.textContent = '';
+      alertBox.className = 'auth-status-msg';
+      alertBox.style.display = 'none';
+    }
+
+    if (mode === 'signup') {
+      if (tabLogin) tabLogin.classList.remove('active');
+      if (tabSignUp) tabSignUp.classList.add('active');
+      if (btnSubmit) {
+        btnSubmit.innerText = 'GUMAWA NG BAGONG ACCOUNT (SIGN UP)';
+        btnSubmit.style.background = 'linear-gradient(45deg, #10b981, #059669)';
+      }
+    } else {
+      if (tabSignUp) tabSignUp.classList.remove('active');
+      if (tabLogin) tabLogin.classList.add('active');
+      if (btnSubmit) {
+        btnSubmit.innerText = 'LOG IN SA GMAIL';
+        btnSubmit.style.background = 'linear-gradient(45deg, #0284c7, #00f0ff)';
+      }
+    }
+  }
+
+  function showAuthMessage(msg, isError) {
+    const alertBox = document.getElementById('authAlert');
+    if (!alertBox) return;
+    alertBox.textContent = msg;
+    alertBox.className = 'auth-status-msg ' + (isError ? 'error' : 'success');
+    alertBox.style.display = 'block';
+  }
+
+  // --- SUBMIT GMAIL / EMAIL AUTH ---
+  function handleAuthSubmit() {
+    const email = document.getElementById('authEmail')?.value.trim();
+    const password = document.getElementById('authPassword')?.value;
+
+    if (!email || !email.includes('@')) {
+      showAuthMessage('Pakilagay ang wastong Gmail o Email address.', true);
+      return;
+    }
+    if (!password || password.length < 6) {
+      showAuthMessage('Ang password ay dapat hindi bababa sa 6 characters.', true);
+      return;
+    }
+
+    const btn = document.getElementById('btnAuthSubmit');
+    if (btn) btn.disabled = true;
+
+    if (!authService) {
+      // Fallback persistent session if running offline
+      const mockUid = 'ben_' + btoa(email.toLowerCase()).substring(0, 14);
+      onUserSignedIn({ uid: mockUid, email: email, displayName: email.split('@')[0] }, "Naka-log in (Local Session Saved)");
+      if (btn) btn.disabled = false;
+      return;
+    }
+
+    if (authMode === 'signup') {
+      authService.createUserWithEmailAndPassword(email, password)
+        .then((cred) => {
+          if (btn) btn.disabled = false;
+          onUserSignedIn(cred.user, "Matagumpay na nag-sign up ang iyong Gmail!");
+        })
+        .catch((err) => {
+          if (btn) btn.disabled = false;
+          let message = err.message || 'Error sa pag-sign up.';
+          if (err.code === 'auth/email-already-in-use') message = 'May account na ang Gmail na ito! Mag-Log in na lang.';
+          if (err.code === 'auth/weak-password') message = 'Masyadong mahina ang password (minimum 6 letters/numbers).';
+          showAuthMessage(message, true);
+        });
+    } else {
+      authService.signInWithEmailAndPassword(email, password)
+        .then((cred) => {
+          if (btn) btn.disabled = false;
+          onUserSignedIn(cred.user, "Maligayang pagbabalik! Naka-log in na.");
+        })
+        .catch((err) => {
+          if (btn) btn.disabled = false;
+          let message = err.message || 'Maling email o password.';
+          if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+            message = 'Walang natagpuang account o mali ang password. Paki-check o mag-Sign Up muna.';
+          }
+          showAuthMessage(message, true);
+        });
+    }
+  }
+
+  // --- GOOGLE SIGN IN POPUP ---
+  function handleGoogleSignIn() {
+    if (!authService) {
+      showAuthMessage('Google Authentication ay offline o hindi ma-load.', true);
+      return;
+    }
+    const provider = new firebase.auth.GoogleAuthProvider();
+    authService.signInWithPopup(provider)
+      .then((res) => {
+        onUserSignedIn(res.user, "Naka-log in gamit ang Google: " + (res.user.displayName || res.user.email));
+      })
+      .catch((err) => {
+        showAuthMessage(err.message || "Hindi natuloy ang Google sign-in.", true);
+      });
+  }
+
+  // --- USER SIGNED IN & PERMANENT SESSION PERSISTENCE ---
+  function onUserSignedIn(user, notifyMsg) {
+    currentAuthUser = {
+      uid: user.uid,
+      email: user.email || 'adventurer@gmail.com',
+      displayName: user.displayName || user.email?.split('@')[0] || 'Adventurer'
+    };
+
+    // I-save sa localStorage para hindi na kailanman babalik sa login screen kapag nag-out bigla
+    try {
+      localStorage.setItem(USER_SESSION_KEY, JSON.stringify(currentAuthUser));
+      localStorage.setItem('ben_adventurer_uid', user.uid);
+    } catch(e) {}
+
+    showAuthMessage(notifyMsg || 'Naka-log in na!', false);
+    updateSessionUi();
+    loadUserCloudData(user.uid);
+  }
+
+  // --- SIGN OUT / SWITCH ACCOUNT ---
+  function handleSignOut() {
+    if (authService) {
+      authService.signOut().catch(()=>{});
+    }
+    currentAuthUser = null;
+    try {
+      localStorage.removeItem(USER_SESSION_KEY);
+    } catch(e) {}
+    updateSessionUi();
+  }
+
+  // --- UPDATE SESSION UI ---
+  function updateSessionUi() {
+    const sessionCard = document.getElementById('activeSessionCard');
+    const authCard = document.getElementById('authCard');
+    const emailEl = document.getElementById('sessionUserEmail');
+    const lvlEl = document.getElementById('sessionUserLevel');
+    const coinsEl = document.getElementById('sessionUserCoins');
+
+    if (currentAuthUser) {
+      if (sessionCard) sessionCard.style.display = 'flex';
+      if (authCard) authCard.style.display = 'none';
+      if (emailEl) emailEl.textContent = currentAuthUser.email;
+      if (lvlEl) lvlEl.textContent = currentLevel;
+      if (coinsEl) coinsEl.textContent = coins;
+    } else {
+      if (sessionCard) sessionCard.style.display = 'none';
+      if (authCard) authCard.style.display = 'flex';
+    }
+  }
+
+  // --- LOAD FIRESTORE CLOUD DATA ---
+  function loadUserCloudData(uid) {
+    if (!firestoreDb || !uid) return;
+    firestoreDb.collection("adventurer_profiles").doc(uid).get().then(doc => {
+      if (doc.exists) {
+        const data = doc.data();
+        if (data.level && data.level > currentLevel) {
+          currentLevel = Math.max(1, Math.min(1000, data.level));
+          localStorage.setItem(SAVE_KEY, currentLevel.toString());
+        }
+        if (data.coins !== undefined && data.coins > coins) {
+          coins = data.coins;
+        }
+        if (data.lives !== undefined && data.lives > 0) {
+          lives = data.lives;
+        }
+        updateSessionUi();
+        const cloudPill = document.getElementById('hudCloud');
+        if (cloudPill) cloudPill.innerText = "☁️ Restored";
+      }
+    }).catch(e => console.warn("Load cloud data error:", e));
+  }
+
+  // Auto-restore saved user session on initial boot so user never returns to login gate
+  try {
+    const savedSession = localStorage.getItem(USER_SESSION_KEY);
+    if (savedSession) {
+      currentAuthUser = JSON.parse(savedSession);
+      updateSessionUi();
+    }
+  } catch(e) {}
+
+  if (authService) {
+    authService.onAuthStateChanged((user) => {
+      if (user) {
+        onUserSignedIn(user, null);
+      } else if (!localStorage.getItem(USER_SESSION_KEY)) {
+        currentAuthUser = null;
+        updateSessionUi();
+      }
+    });
+  }
+
+  function syncToFirestore() {
+    if (!firestoreDb) return;
+    try {
+      let docId = currentAuthUser ? currentAuthUser.uid : (localStorage.getItem('ben_adventurer_uid') || 'ben_guest');
+      firestoreDb.collection("adventurer_profiles").doc(docId).set({
+        userEmail: currentAuthUser ? currentAuthUser.email : 'guest',
+        level: currentLevel,
+        coins: coins,
+        lives: lives,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        title: `Adventurer Lvl ${currentLevel}`,
+        game: "Ben The Adventurer",
+        projectId: "super-tank-online"
+      }, { merge: true }).then(() => {
+        const cloudPill = document.getElementById('hudCloud');
+        if (cloudPill) cloudPill.innerText = "☁️ Synced";
+        updateSessionUi();
+      }).catch(err => {
+        console.warn("Firestore save:", err);
+      });
+    } catch(e) {}
+  }
+
+  function saveCurrentLevel() {
+    try {
+      localStorage.setItem(SAVE_KEY, currentLevel.toString());
+    } catch(e) {}
+    syncToFirestore();
+  }
+
+  function getBiome(lvl) {
+    if (lvl <= 200) return { name: "Emerald Grasslands", sky: ['#1a365d', '#2b6cb0', '#3182ce'], ground: '#22543d', grass: '#48bb78', dragonColor: '#22c55e' };
+    if (lvl <= 400) return { name: "Candy Kingdom", sky: ['#4a044e', '#86198f', '#c026d3'], ground: '#701a75', grass: '#f472b6', dragonColor: '#ec4899' };
+    if (lvl <= 600) return { name: "Sky Castle", sky: ['#1e1b4b', '#3730a3', '#4f46e5'], ground: '#312e81', grass: '#818cf8', dragonColor: '#06b6d4' };
+    if (lvl <= 800) return { name: "Desert Oasis", sky: ['#451a03', '#9a3412', '#ea580c'], ground: '#7c2d12', grass: '#facc15', dragonColor: '#eab308' };
+    return { name: "Lava Citadel", sky: ['#450a0a', '#7f1d1d', '#b91c1c'], ground: '#7f1d1d', grass: '#f97316', dragonColor: '#ef4444' };
+  }
+
+  // =========================================================================
+  // 3. CANVAS & EXPANDED WORLD STATE (Mario-Style Long Distance + Stairs)
+  // =========================================================================
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+
+  let gameActive = false;
+  let gameTime = 300;
+  let timerInterval = null;
+  let lives = 10;
+  let coins = 180;
+  const CAMERA_ZOOM = 0.80; // 20% zoom-out (in 15%-25% range) for wide mobile view
+  let cameraX = 0;
+  let cameraY = 0;
+  let groundY = 380;
+  let worldLength = 6500;
+
+  // Player Character with calibrated Mario platforming physics & SLIDE
+  let player = {
+    x: 100,
+    y: 200,
+    width: 34,
+    height: 48,
+    vx: 0,
+    vy: 0,
+    walkSpeed: 3.8, // Responsive walking pace with high air mobility
+    jumpForce: -14.2, // Tuned jump force for effortless clearance of platforms & stairs
+    grounded: false,
+    facingRight: true,
+    isSliding: false,
+    slideTimer: 0,
+    invulnerable: 0,
+    coyoteTimer: 0, // 7-frame forgiveness window when walking off edges
+    jumpBufferTimer: 0 // Buffers jump button presses before landing
+  };
+
+  let platforms = [];
+  let enemies = [];
+  let birds = [];
+  let eggs = [];
+  let blastProjectiles = [];
+  let sparkles = [];
+  let collectibles = [];
+  let dragonBoss = null;
+  let goal = { x: 6000, y: 0, width: 50, height: 70 };
+
+  // =========================================================================
+  // MOVEMENT CONTROLS STATE & DEFENSIVE RESET
+  // =========================================================================
+  let moveLeft = false;
+  let moveRight = false;
+  let isMouseDownOnPad = false;
+  let movePad = null;
+  let arrowLeft = null;
+  let arrowRight = null;
+
+  function resetMovePad() {
+    moveLeft = false;
+    moveRight = false;
+    if (arrowLeft && arrowLeft.classList) arrowLeft.classList.remove('active');
+    if (arrowRight && arrowRight.classList) arrowRight.classList.remove('active');
+  }
+
+  function resizeCanvas() {
+    const oldGroundY = groundY;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // Viewport height in game world coordinates (under 20% zoom-out)
+    const viewH = canvas.height / CAMERA_ZOOM;
+    // Ground positioned so player & gameplay are comfortably in upper-middle area
+    groundY = Math.max(260, Math.floor(viewH - 110));
+
+    if (!gameActive || platforms.length === 0) {
+      generateWorld(currentLevel);
+      player.y = groundY - player.height;
+    } else if (oldGroundY !== groundY && platforms.length > 0) {
+      const deltaY = groundY - oldGroundY;
+      for (let p of platforms) p.y += deltaY;
+      for (let e of enemies) e.y += deltaY;
+      for (let b of birds) b.y += deltaY;
+      for (let g of eggs) g.y += deltaY;
+      for (let c of collectibles) c.y += deltaY;
+      if (dragonBoss) dragonBoss.y += deltaY;
+      goal.y += deltaY;
+      player.y += deltaY;
+      if (player.grounded) player.vy = 0;
+    }
+    resetMovePad();
+  }
+  window.addEventListener('resize', resizeCanvas);
+  window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 100));
+  window.addEventListener('blur', () => resetMovePad());
+
+  // =========================================================================
+  // 4. MARIO-STYLE LEVEL GENERATOR (Hagdanan, Patrolling Enemies, Dragon Boss)
+  // =========================================================================
+  function generateWorld(lvl) {
+    const viewH = canvas.height / CAMERA_ZOOM;
+    groundY = Math.max(260, Math.floor(viewH - 110));
+    // Expand level distance progressively (6,000px to 9,000px)
+    worldLength = 5800 + Math.min(3200, lvl * 30);
+
+    platforms = [];
+    enemies = [];
+    birds = [];
+    eggs = [];
+    collectibles = [];
+    blastProjectiles = [];
+    sparkles = [];
+
+    // 1. Base Continuous Ground with Fair, Solvable Mario Pits
+    let currentX = 0;
+    // Guaranteed safe starting island (at least 680px wide)
+    platforms.push({ x: 0, y: groundY, width: 680, height: 160, type: 'ground' });
+    currentX = 680;
+
+    while (currentX < worldLength) {
+      // Pit gap between ground sections strictly capped between 70px and 96px!
+      // At Ben's jump velocity (-14.2) and walk speed (3.8), his achievable horizontal distance is >215px.
+      // This leaves a guaranteed, comfortable safety margin of >110px on every jump!
+      if (currentX < worldLength - 900) {
+        const pitGap = 70 + Math.random() * 26; // Strict max ~96px
+        currentX += pitGap;
+      }
+      const sectionW = 550 + Math.random() * 350;
+      platforms.push({ x: currentX, y: groundY, width: sectionW, height: 160, type: 'ground' });
+      currentX += sectionW;
+    }
+
+    // 2. Super Mario Stepped Pyramids & Staircases ("mga hagdanan")
+    const stairLocations = [
+      850, 1850, 2900, 4100, 5100
+    ];
+
+    for (let baseX of stairLocations) {
+      if (baseX + 400 > worldLength - 700) continue;
+
+      // Ascending staircase (4 steps up, stepH: 22px each for smooth climbing)
+      for (let s = 1; s <= 4; s++) {
+        const stepW = 44;
+        const stepH = s * 22;
+        platforms.push({
+          x: baseX + (s - 1) * stepW,
+          y: groundY - stepH,
+          width: stepW,
+          height: stepH + 4,
+          type: 'stair'
+        });
+      }
+
+      // Flat middle platform with golden coins
+      const midPlatformX = baseX + 4 * 44;
+      platforms.push({
+        x: midPlatformX,
+        y: groundY - 88,
+        width: 90,
+        height: 92,
+        type: 'stair'
+      });
+      collectibles.push({ x: midPlatformX + 45, y: groundY - 120, radius: 9, collected: false });
+
+      // Descending staircase (4 steps down)
+      for (let s = 4; s >= 1; s--) {
+        const stepW = 44;
+        const stepH = s * 22;
+        platforms.push({
+          x: midPlatformX + 90 + (4 - s) * stepW,
+          y: groundY - stepH,
+          width: stepW,
+          height: stepH + 4,
+          type: 'stair'
+        });
+      }
+
+      // Add enemies patrolling down the stairs
+      enemies.push({
+        x: midPlatformX + 45,
+        y: groundY - 114,
+        vx: 1.2,
+        minX: baseX + 20,
+        maxX: midPlatformX + 240,
+        type: 'crab',
+        width: 32,
+        height: 26,
+        alive: true
+      });
+    }
+
+    // 3. Floating Island Mystery Platforms & Bridges (Evenly spaced & comfortably reachable)
+    for (let fx = 420; fx < worldLength - 800; fx += 250) {
+      const platY = groundY - (55 + (fx % 45)); // Max 100px elevation, easily reachable with jump
+      platforms.push({
+        x: fx,
+        y: platY,
+        width: 130,
+        height: 22,
+        type: 'island'
+      });
+
+      // Coin cluster on elevated platforms
+      collectibles.push({ x: fx + 32, y: platY - 24, radius: 9, collected: false });
+      collectibles.push({ x: fx + 65, y: platY - 24, radius: 9, collected: false });
+      collectibles.push({ x: fx + 98, y: platY - 24, radius: 9, collected: false });
+
+      // Jungle Slime patrolling on some platforms
+      if (fx % 500 === 0) {
+        enemies.push({
+          x: fx + 40,
+          y: platY - 24,
+          vx: 1.1,
+          minX: fx + 10,
+          maxX: fx + 110,
+          type: 'slime',
+          width: 28,
+          height: 24,
+          alive: true
+        });
+      }
+    }
+
+    // =========================================================================
+    // 3b. SAFE JUMP VALIDATION ENGINE (Guaranteed 100% Solvable Across Levels 1-1000)
+    // =========================================================================
+    platforms.sort((a, b) => a.x - b.x);
+
+    // Scan all ground blocks: ensure NO gap exceeds 100px. If any gap > 100px, dynamically insert intermediate island
+    const groundBlocks = platforms.filter(p => p.type === 'ground');
+    for (let i = 0; i < groundBlocks.length - 1; i++) {
+      const g1 = groundBlocks[i];
+      const g2 = groundBlocks[i + 1];
+      const gap = g2.x - (g1.x + g1.width);
+      if (gap > 98) {
+        const stepW = 85;
+        const midX = g1.x + g1.width + (gap - stepW) / 2;
+        const midY = groundY - 26;
+        platforms.push({
+          x: midX,
+          y: midY,
+          width: stepW,
+          height: 22,
+          type: 'island'
+        });
+        collectibles.push({ x: midX + stepW / 2, y: midY - 24, radius: 9, collected: false });
+      }
+    }
+
+    // Ensure all floating islands are reachable (height capped relative to groundY)
+    for (let p of platforms) {
+      if (p.type === 'island' && p.y < groundY - 105) {
+        p.y = groundY - 100;
+      }
+    }
+
+    // 4. Flying Birds that Drop Eggs ("mga ibon na nagbabagsak ng mga itlog")
+    const birdSpawns = [
+      650, 1400, 2200, 3200, 4200, 4900
+    ];
+    for (let bx of birdSpawns) {
+      if (bx > worldLength - 800) continue;
+      birds.push({
+        x: bx,
+        y: groundY - 220 - Math.random() * 60,
+        vx: (Math.random() > 0.5 ? 1 : -1) * 2.0,
+        minX: bx - 220,
+        maxX: bx + 220,
+        dropCooldown: 120 + Math.floor(Math.random() * 80),
+        width: 36,
+        height: 24,
+        wingAngle: 0,
+        alive: true
+      });
+    }
+
+    // 5. Fire-Breathing Dragon Boss at the Level End ("dapat me dragon sa last")
+    const dragonX = worldLength - 520;
+    const biome = getBiome(lvl);
+    dragonBoss = {
+      x: dragonX,
+      y: groundY - 110,
+      width: 90,
+      height: 80,
+      vx: -1.2,
+      minX: dragonX - 160,
+      maxX: dragonX + 80,
+      health: 8 + Math.floor(lvl / 20), // Scales from 8 to 58 hits as level increases
+      maxHealth: 8 + Math.floor(lvl / 20),
+      color: biome.dragonColor,
+      fireTimer: 100,
+      alive: true
+    };
+
+    // Princess Zoe Rescue Sanctuary at the far end behind the Dragon
+    goal = {
+      x: worldLength - 160,
+      y: groundY - 60,
+      width: 48,
+      height: 60
+    };
+  }
+
+  resizeCanvas();
+
+  // =========================================================================
+  // 5. SEAMLESS CONTROLS (WALK, SLIDE, BLAST, JUMP)
+  // =========================================================================
+  movePad = document.getElementById('movePad');
+  arrowLeft = document.getElementById('arrowLeft');
+  arrowRight = document.getElementById('arrowRight');
+
+  function updateMovePad(clientX) {
+    if (!movePad) return;
+    const rect = movePad.getBoundingClientRect();
+    const midX = rect.left + rect.width / 2;
+    if (clientX < midX) {
+      moveLeft = true;
+      moveRight = false;
+      player.facingRight = false;
+      if (arrowLeft) arrowLeft.classList.add('active');
+      if (arrowRight) arrowRight.classList.remove('active');
+    } else {
+      moveRight = true;
+      moveLeft = false;
+      player.facingRight = true;
+      if (arrowRight) arrowRight.classList.add('active');
+      if (arrowLeft) arrowLeft.classList.remove('active');
+    }
+  }
+
+  if (movePad) {
+    movePad.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      audio.init();
+      if (e.touches.length > 0) updateMovePad(e.touches[0].clientX);
+    }, { passive: false });
+
+    movePad.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (e.touches.length > 0) updateMovePad(e.touches[0].clientX);
+    }, { passive: false });
+
+    movePad.addEventListener('touchend', (e) => { e.preventDefault(); resetMovePad(); }, { passive: false });
+    movePad.addEventListener('touchcancel', () => resetMovePad());
+
+    movePad.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      audio.init();
+      isMouseDownOnPad = true;
+      updateMovePad(e.clientX);
+    });
+  }
+
+  window.addEventListener('mousemove', (e) => { if (isMouseDownOnPad) updateMovePad(e.clientX); });
+  window.addEventListener('mouseup', () => { if (isMouseDownOnPad) { isMouseDownOnPad = false; resetMovePad(); } });
+
+  function bindAction(btnId, callback) {
+    const el = document.getElementById(btnId);
+    if (!el) return;
+    el.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      audio.init();
+      el.classList.add('active');
+      callback();
+    }, { passive: false });
+    el.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      el.classList.remove('active');
+    }, { passive: false });
+    el.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      audio.init();
+      el.classList.add('active');
+      callback();
+    });
+    el.addEventListener('mouseup', () => el.classList.remove('active'));
+    el.addEventListener('mouseleave', () => el.classList.remove('active'));
+  }
+
+  // JUMP MECHANIC WITH COYOTE TIME & JUMP BUFFER
+  function executeJump() {
+    if (!gameActive) return;
+    if (player.grounded || player.coyoteTimer > 0) {
+      player.vy = player.jumpForce;
+      player.grounded = false;
+      player.coyoteTimer = 0;
+      player.jumpBufferTimer = 0;
+      player.isSliding = false;
+      audio.jump();
+      createJumpDust(player.x + 17, player.y + player.height);
+    } else {
+      player.jumpBufferTimer = 7; // Buffer jump request for responsive landing jump
+    }
+  }
+
+  // JUMP BUTTON BINDING
+  bindAction('jumpBtn', () => {
+    executeJump();
+  });
+
+  // SLIDE FEATURE (Ben ducks low & slides with friction boost!)
+  bindAction('slideBtn', () => {
+    triggerSlide();
+  });
+
+  function triggerSlide() {
+    if (!gameActive || player.isSliding) return;
+    player.isSliding = true;
+    player.slideTimer = 28; // slide duration
+    audio.slide();
+    const dir = player.facingRight ? 1 : -1;
+    player.vx = dir * 7.5; // Slide speed boost
+    // Dust particles
+    for (let i = 0; i < 8; i++) {
+      sparkles.push({
+        x: player.x + (player.facingRight ? 6 : player.width - 6),
+        y: player.y + player.height,
+        vx: -dir * (Math.random() * 4 + 1),
+        vy: -Math.random() * 2,
+        color: '#e2e8f0',
+        life: 20
+      });
+    }
+  }
+
+  // BLAST WEAPON
+  bindAction('blastBtn', () => {
+    fireBlast();
+  });
+
+  function fireBlast() {
+    if (!gameActive) return;
+    audio.blast();
+    const bx = player.facingRight ? player.x + player.width + 6 : player.x - 14;
+    const bvx = player.facingRight ? 12 : -12;
+    blastProjectiles.push({
+      x: bx,
+      y: player.isSliding ? player.y + 14 : player.y + 24,
+      vx: bvx,
+      radius: 7,
+      life: 60
+    });
+    for (let i = 0; i < 5; i++) {
+      sparkles.push({
+        x: bx,
+        y: player.isSliding ? player.y + 14 : player.y + 24,
+        vx: (Math.random() - 0.5) * 4,
+        vy: (Math.random() - 0.5) * 4,
+        color: '#c084fc',
+        life: 15
+      });
+    }
+  }
+
+  // Keyboard controls
+  window.addEventListener('keydown', (e) => {
+    audio.init();
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+      moveLeft = true;
+      player.facingRight = false;
+      arrowLeft.classList.add('active');
+    } else if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+      moveRight = true;
+      player.facingRight = true;
+      arrowRight.classList.add('active');
+    } else if (e.code === 'ArrowDown' || e.code === 'KeyS' || e.code === 'KeyC') {
+      triggerSlide();
+    } else if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+      executeJump();
+    } else if (e.code === 'KeyF' || e.code === 'KeyZ' || e.code === 'KeyX' || e.code === 'Enter') {
+      fireBlast();
+    }
+  });
+
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') { moveLeft = false; arrowLeft.classList.remove('active'); }
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') { moveRight = false; arrowRight.classList.remove('active'); }
+  });
+
+  function createJumpDust(x, y) {
+    for (let i = 0; i < 6; i++) {
+      sparkles.push({
+        x: x,
+        y: y,
+        vx: (Math.random() - 0.5) * 3,
+        vy: -Math.random() * 2,
+        color: '#6ee7b7',
+        life: 18
+      });
+    }
+  }
+
+  function claimAdReward() {
+    audio.coin();
+    coins += 50;
+    updateHUD();
+    syncToFirestore();
+    const adText = document.getElementById('adRewardText');
+    adText.innerText = "Claimed! +50 Coins ⭐";
+    adText.style.color = "#4ade80";
+    setTimeout(() => {
+      adText.innerText = "Tap for +50 Coins (Unit: 6300978111)";
+      adText.style.color = "#00f0ff";
+    }, 3000);
+  }
+
+  // =========================================================================
+  // 6. GAME LIFECYCLE (Level 1 to 1,000 Scaling & Progress)
+  // =========================================================================
+  function startGame() {
+    audio.init();
+    document.getElementById('startScreen').style.display = 'none';
+    document.getElementById('gameOverScreen').style.display = 'none';
+    document.getElementById('victoryScreen').style.display = 'none';
+
+    generateWorld(currentLevel);
+    player.x = 100;
+    player.y = groundY - player.height;
+    player.vx = 0;
+    player.vy = 0;
+    player.facingRight = true;
+    player.isSliding = false;
+    player.invulnerable = 60;
+
+    gameTime = 300;
+    lives = 10;
+    cameraX = 0;
+    cameraY = 0;
+    gameActive = true;
+    blastProjectiles = [];
+    sparkles = [];
+    eggs = [];
+
+    updateHUD();
+
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      if (!gameActive) return;
+      gameTime--;
+      let mins = Math.floor(gameTime / 60).toString().padStart(2, '0');
+      let secs = (gameTime % 60).toString().padStart(2, '0');
+      document.getElementById('timerText').innerText = `${mins}:${secs}`;
+      if (gameTime <= 0) {
+        triggerGameOver("Time ran out on the Island!");
+      }
+    }, 1000);
+
+    audio.startBgm();
+    requestAnimationFrame(gameLoop);
+  }
+
+  function nextLevel() {
+    if (currentLevel < 1000) {
+      currentLevel++;
+      saveCurrentLevel();
+    }
+    document.getElementById('victoryScreen').style.display = 'none';
+    generateWorld(currentLevel);
+    player.x = 100;
+    player.y = groundY - player.height;
+    player.vx = 0;
+    player.vy = 0;
+    player.isSliding = false;
+    cameraX = 0;
+    cameraY = 0;
+    gameTime = 300;
+    gameActive = true;
+    blastProjectiles = [];
+    sparkles = [];
+    eggs = [];
+    updateHUD();
+    audio.startBgm();
+    requestAnimationFrame(gameLoop);
+  }
+
+  function triggerGameOver(reason) {
+    gameActive = false;
+    audio.stopBgm();
+    audio.hit();
+    document.getElementById('gameOverSubtext').innerText = reason || "Ben was caught by the island hazards!";
+    document.getElementById('gameOverScreen').style.display = 'flex';
+  }
+
+  function triggerVictory() {
+    gameActive = false;
+    audio.stopBgm();
+    audio.victory();
+    const biome = getBiome(currentLevel);
+    document.getElementById('victorySubtext').innerText = `Princess Zoe is saved from the ${biome.name} Dragon! Advancing to Level ${currentLevel + 1}!`;
+    document.getElementById('victoryScreen').style.display = 'flex';
+  }
+
+  function updateHUD() {
+    const biome = getBiome(currentLevel);
+    document.getElementById('hudLives').innerText = `❤️ x${lives}`;
+    document.getElementById('hudCoins').innerText = `🪙 ${coins}`;
+    document.getElementById('hudLevel').innerText = `⭐ LVL ${currentLevel} • ${biome.name}`;
+  }
+
+  // =========================================================================
+  // 7. 60 FPS ADVANCED PLATFORMER RENDER LOOP
+  // =========================================================================
+  function gameLoop() {
+    if (!gameActive) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Dynamic viewport bounds in world coordinates (Zoomed out by 20% for mobile panoramic view)
+    const viewW = canvas.width / CAMERA_ZOOM;
+    const viewH = canvas.height / CAMERA_ZOOM;
+
+    // Smooth Camera Follow X (Horizontal)
+    const targetCamX = player.x - viewW * 0.35;
+    cameraX += (targetCamX - cameraX) * 0.1;
+    if (cameraX < 0) cameraX = 0;
+    if (cameraX > worldLength - viewW + 100) cameraX = worldLength - viewW + 100;
+
+    // Smooth Camera Follow Y with Vertical Offset Focus (pataas ang focus)
+    // Pins player & platforms at ~44% height so they stay in middle-upper area away from bottom buttons
+    const targetCamY = player.y - viewH * 0.44;
+    cameraY += (targetCamY - cameraY) * 0.1;
+    if (cameraY < 0) cameraY = 0;
+    const maxCamY = Math.max(0, groundY + 140 - viewH);
+    if (cameraY > maxCamY) cameraY = maxCamY;
+
+    // --- DRAW DYNAMIC BIOME BACKGROUND (Full screen viewport) ---
+    const biome = getBiome(currentLevel);
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    skyGrad.addColorStop(0, biome.sky[0]);
+    skyGrad.addColorStop(0.5, biome.sky[1]);
+    skyGrad.addColorStop(1, biome.sky[2]);
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Parallax Distant Clouds & Hills
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+    for (let c = 0; c < 14; c++) {
+      const cloudX = (c * 440) - ((cameraX * 0.12) % 440);
+      const cloudY = 32 + (c % 3) * 20;
+      ctx.beginPath();
+      ctx.arc(cloudX, cloudY, 26, 0, Math.PI * 2);
+      ctx.arc(cloudX + 22, cloudY - 5, 32, 0, Math.PI * 2);
+      ctx.arc(cloudX + 46, cloudY, 22, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.fillStyle = biome.ground;
+    for (let i = 0; i < 20; i++) {
+      const hillX = (i * 360) - ((cameraX * 0.22) % 360);
+      ctx.beginPath();
+      ctx.arc(hillX, canvas.height - 35 - (cameraY * 0.2), 170, Math.PI, 0, false);
+      ctx.fill();
+    }
+
+    // Apply 20% Zoom-Out Scale and 2D Camera Translation
+    ctx.save();
+    ctx.scale(CAMERA_ZOOM, CAMERA_ZOOM);
+    ctx.translate(-cameraX, -cameraY);
+
+    // --- PHYSICS & SLIDING MECHANIC ---
+    if (player.coyoteTimer > 0) player.coyoteTimer--;
+    if (player.jumpBufferTimer > 0) {
+      player.jumpBufferTimer--;
+      if (player.grounded) {
+        executeJump();
+      }
+    }
+
+    if (player.isSliding) {
+      player.slideTimer--;
+      // Friction during slide
+      player.vx *= 0.95;
+      if (player.slideTimer <= 0 || Math.abs(player.vx) < 1.0) {
+        player.isSliding = false;
+      }
+      // Dust particles while sliding
+      if (Math.random() < 0.4) {
+        sparkles.push({
+          x: player.x + (player.facingRight ? 4 : player.width - 4),
+          y: player.y + player.height,
+          vx: (player.facingRight ? -1 : 1) * (Math.random() * 3 + 1),
+          vy: -Math.random() * 2,
+          color: '#cbd5e1',
+          life: 15
+        });
+      }
+    } else {
+      // Responsive Super Mario Controlled Pace with full Air Control
+      if (moveLeft) player.vx = -player.walkSpeed;
+      else if (moveRight) player.vx = player.walkSpeed;
+      else player.vx = 0;
+    }
+
+    player.x += player.vx;
+    player.vy += 0.50; // Optimized gravity for smooth, floating jump arc
+    if (player.vy > 14) player.vy = 14;
+    player.y += player.vy;
+
+    // Boundary check & Safe Respawn (Pit death check relative to ground level)
+    if (player.x < 10) player.x = 10;
+    if (player.y > groundY + 180) {
+      lives--;
+      updateHUD();
+      audio.hit();
+      if (lives <= 0) {
+        triggerGameOver("Ben fell into the ocean!");
+        ctx.restore();
+        return;
+      } else {
+        let safeX = 80;
+        let safeY = groundY - player.height;
+        for (let i = platforms.length - 1; i >= 0; i--) {
+          const p = platforms[i];
+          if (p.x <= player.x && p.type === 'ground' && p.width >= 300) {
+            safeX = Math.max(80, p.x + 80);
+            safeY = p.y - player.height;
+            break;
+          }
+        }
+        player.x = safeX;
+        player.y = safeY;
+        player.vx = 0;
+        player.vy = 0;
+        player.grounded = true;
+        player.coyoteTimer = 7;
+        player.isSliding = false;
+        player.invulnerable = 90;
+      }
+    }
+
+    // --- CONTINUOUS PLATFORM / STAIR COLLISIONS ---
+    player.grounded = false;
+    for (let p of platforms) {
+      if (player.x + player.width > p.x && player.x < p.x + p.width) {
+        const prevBottom = player.y + player.height - player.vy;
+        const currBottom = player.y + player.height;
+        if (player.vy >= 0 && prevBottom <= p.y + 16 && currBottom >= p.y) {
+          player.y = p.y - player.height;
+          player.vy = 0;
+          player.grounded = true;
+          player.coyoteTimer = 7;
+          if (player.jumpBufferTimer > 0) {
+            executeJump();
+          }
+          break;
+        }
+      }
+    }
+
+    // --- DRAW PLATFORMS & STAIRS ---
+    for (let p of platforms) {
+      if (p.x + p.width < cameraX - 50 || p.x > cameraX + viewW + 50) continue;
+
+      ctx.fillStyle = p.type === 'ground' ? biome.ground : '#334155';
+      ctx.fillRect(p.x, p.y, p.width, p.height);
+
+      // Mario Staircase block styling
+      if (p.type === 'stair') {
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(p.x, p.y, p.width, p.height);
+        // Rivet dots on stairs
+        ctx.fillStyle = '#facc15';
+        ctx.fillRect(p.x + 4, p.y + 4, 3, 3);
+        ctx.fillRect(p.x + p.width - 7, p.y + 4, 3, 3);
+      } else {
+        // Lush top grass line
+        ctx.fillStyle = biome.grass;
+        ctx.fillRect(p.x, p.y, p.width, 6);
+      }
+    }
+
+    // --- COLLECTIBLES (COINS) ---
+    for (let c of collectibles) {
+      if (!c.collected) {
+        ctx.fillStyle = '#f6e05e';
+        ctx.beginPath();
+        ctx.arc(c.x, c.y + Math.sin(Date.now() * 0.006 + c.x) * 4, c.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#d69e2e';
+        ctx.beginPath();
+        ctx.arc(c.x, c.y + Math.sin(Date.now() * 0.006 + c.x) * 4, c.radius - 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (
+          player.x + player.width > c.x - c.radius &&
+          player.x < c.x + c.radius &&
+          player.y + player.height > c.y - c.radius &&
+          player.y < c.y + c.radius
+        ) {
+          c.collected = true;
+          coins += 10;
+          updateHUD();
+          audio.coin();
+          for (let s = 0; s < 8; s++) {
+            sparkles.push({
+              x: c.x,
+              y: c.y,
+              vx: (Math.random() - 0.5) * 5,
+              vy: (Math.random() - 0.5) * 5,
+              color: '#f6e05e',
+              life: 20
+            });
+          }
+        }
+      }
+    }
+
+    // --- BLAST PROJECTILES UPDATE & RENDER ---
+    for (let i = blastProjectiles.length - 1; i >= 0; i--) {
+      const b = blastProjectiles[i];
+      b.x += b.vx;
+      b.life--;
+
+      ctx.fillStyle = '#d8b4fe';
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.radius + 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#a855f7';
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Hit Walking Enemies
+      for (let e of enemies) {
+        if (e.alive && b.x > e.x && b.x < e.x + e.width && b.y > e.y && b.y < e.y + e.height) {
+          e.alive = false;
+          b.life = 0;
+          coins += 50;
+          updateHUD();
+          audio.hit();
+          for (let s = 0; s < 12; s++) {
+            sparkles.push({
+              x: e.x + 16,
+              y: e.y + 12,
+              vx: (Math.random() - 0.5) * 6,
+              vy: (Math.random() - 0.5) * 6,
+              color: '#f87171',
+              life: 24
+            });
+          }
+        }
+      }
+
+      // Hit Flying Birds
+      for (let bd of birds) {
+        if (bd.alive && b.x > bd.x && b.x < bd.x + bd.width && b.y > bd.y && b.y < bd.y + bd.height) {
+          bd.alive = false;
+          b.life = 0;
+          coins += 80;
+          updateHUD();
+          audio.hit();
+          for (let s = 0; s < 14; s++) {
+            sparkles.push({
+              x: bd.x + 18,
+              y: bd.y + 12,
+              vx: (Math.random() - 0.5) * 6,
+              vy: (Math.random() - 0.5) * 6,
+              color: '#38bdf8',
+              life: 25
+            });
+          }
+        }
+      }
+
+      // Hit Falling Eggs
+      for (let eg of eggs) {
+        if (!eg.splat && Math.hypot(b.x - eg.x, b.y - eg.y) < b.radius + eg.radius + 4) {
+          eg.splat = true;
+          b.life = 0;
+          coins += 20;
+          updateHUD();
+          audio.splat();
+        }
+      }
+
+      // Hit Dragon Boss
+      if (dragonBoss && dragonBoss.alive) {
+        if (b.x > dragonBoss.x && b.x < dragonBoss.x + dragonBoss.width && b.y > dragonBoss.y && b.y < dragonBoss.y + dragonBoss.height) {
+          dragonBoss.health--;
+          b.life = 0;
+          audio.hit();
+          for (let s = 0; s < 10; s++) {
+            sparkles.push({
+              x: b.x,
+              y: b.y,
+              vx: (Math.random() - 0.5) * 6,
+              vy: (Math.random() - 0.5) * 6,
+              color: '#f59e0b',
+              life: 20
+            });
+          }
+          if (dragonBoss.health <= 0) {
+            dragonBoss.alive = false;
+            coins += 500;
+            updateHUD();
+            audio.victory();
+          }
+        }
+      }
+
+      if (b.life <= 0) blastProjectiles.splice(i, 1);
+    }
+
+    // --- BIRDS & EGG-DROPPING MECHANIC ("mga ibon na nagbabagsak ng mga itlog") ---
+    for (let bd of birds) {
+      if (!bd.alive) continue;
+      bd.x += bd.vx;
+      if (bd.x < bd.minX || bd.x > bd.maxX) bd.vx = -bd.vx;
+      bd.wingAngle += 0.2;
+
+      // Draw Bird
+      ctx.save();
+      ctx.translate(bd.x, bd.y);
+      if (bd.vx < 0) {
+        ctx.scale(-1, 1);
+        ctx.translate(-bd.width, 0);
+      }
+      // Bird Body
+      ctx.fillStyle = '#0284c7';
+      ctx.beginPath();
+      ctx.ellipse(18, 12, 16, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Flapping Wing
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.moveTo(10, 10);
+      ctx.lineTo(22, 2 + Math.sin(bd.wingAngle) * 8);
+      ctx.lineTo(26, 12);
+      ctx.closePath();
+      ctx.fill();
+      // Beak & Eye
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(32, 10, 6, 4);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(24, 7, 4, 4);
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(26, 8, 2, 2);
+      ctx.restore();
+
+      // Egg Drop Trigger (Periodic or when Ben is underneath!)
+      bd.dropCooldown--;
+      const playerUnderneath = Math.abs(player.x - bd.x) < 140;
+      if (bd.dropCooldown <= 0 || (playerUnderneath && bd.dropCooldown < 60)) {
+        bd.dropCooldown = 150 + Math.floor(Math.random() * 80);
+        eggs.push({
+          x: bd.x + 18,
+          y: bd.y + 18,
+          vy: 2.2,
+          radius: 7,
+          splat: false
+        });
+        audio.eggDrop();
+      }
+    }
+
+    // --- FALLING EGGS LOGIC ---
+    for (let i = eggs.length - 1; i >= 0; i--) {
+      const eg = eggs[i];
+      if (eg.splat) {
+        eggs.splice(i, 1);
+        continue;
+      }
+      eg.vy += 0.35; // Egg Gravity
+      eg.y += eg.vy;
+
+      // Draw Falling Oval Egg
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.ellipse(eg.x, eg.y, eg.radius, eg.radius + 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ca8a04';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Check hit with platforms (egg splatters on ground)
+      for (let p of platforms) {
+        if (eg.x > p.x && eg.x < p.x + p.width && eg.y + eg.radius >= p.y && eg.y <= p.y + 20) {
+          eg.splat = true;
+          audio.splat();
+          for (let s = 0; s < 8; s++) {
+            sparkles.push({
+              x: eg.x,
+              y: p.y,
+              vx: (Math.random() - 0.5) * 5,
+              vy: -Math.random() * 3,
+              color: '#facc15',
+              life: 18
+            });
+          }
+          break;
+        }
+      }
+
+      // Check hit with Ben (Egg minus life!)
+      if (
+        !eg.splat &&
+        player.invulnerable <= 0 &&
+        eg.x > player.x &&
+        eg.x < player.x + player.width &&
+        eg.y > player.y &&
+        eg.y < player.y + player.height
+      ) {
+        eg.splat = true;
+        lives--;
+        updateHUD();
+        audio.hit();
+        audio.splat();
+        player.invulnerable = 90;
+        player.vy = -4;
+        for (let s = 0; s < 12; s++) {
+          sparkles.push({
+            x: eg.x,
+            y: eg.y,
+            vx: (Math.random() - 0.5) * 6,
+            vy: -Math.random() * 4,
+            color: '#facc15',
+            life: 20
+          });
+        }
+        if (lives <= 0) {
+          triggerGameOver("Ben was knocked out by a falling bird egg!");
+          ctx.restore();
+          return;
+        }
+      }
+
+      if (eg.y > groundY + 200) eggs.splice(i, 1);
+    }
+
+    // --- PATROLLING ENEMIES (CRABS & SLIMES) ---
+    for (let e of enemies) {
+      if (!e.alive) continue;
+      e.x += e.vx;
+      if (e.x < e.minX || e.x > e.maxX) e.vx = -e.vx;
+
+      ctx.save();
+      ctx.translate(e.x, e.y);
+      if (e.type === 'crab') {
+        ctx.fillStyle = '#e53e3e';
+        ctx.beginPath();
+        ctx.ellipse(16, 14, 15, 11, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(8, 2, 4, 6); ctx.fillRect(20, 2, 4, 6);
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(9, 3, 2, 3); ctx.fillRect(21, 3, 2, 3);
+        ctx.fillStyle = '#c53030';
+        ctx.fillRect(1, 6, 6, 6); ctx.fillRect(25, 6, 6, 6);
+      } else {
+        ctx.fillStyle = '#38a169';
+        ctx.beginPath();
+        ctx.arc(14, 14, 13, Math.PI, 0);
+        ctx.fill();
+        ctx.fillRect(1, 14, 26, 8);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(7, 8, 4, 4); ctx.fillRect(17, 8, 4, 4);
+      }
+      ctx.restore();
+
+      // Collision with player
+      if (
+        player.invulnerable <= 0 &&
+        player.x + player.width > e.x + 4 &&
+        player.x < e.x + e.width - 4 &&
+        player.y + player.height > e.y &&
+        player.y < e.y + e.height
+      ) {
+        // SLIDE TACKLE or STOMP defeats enemy!
+        if (player.isSliding || (player.vy > 0 && player.y + player.height - player.vy <= e.y + 14)) {
+          e.alive = false;
+          coins += 40;
+          updateHUD();
+          audio.jump();
+          if (!player.isSliding) player.vy = player.jumpForce * 0.75;
+          for (let s = 0; s < 10; s++) {
+            sparkles.push({
+              x: e.x + 16,
+              y: e.y + 10,
+              vx: (Math.random() - 0.5) * 5,
+              vy: -Math.random() * 4,
+              color: '#4ade80',
+              life: 20
+            });
+          }
+        } else {
+          lives--;
+          updateHUD();
+          audio.hit();
+          player.invulnerable = 90;
+          const knockbackDir = player.x < e.x ? -1 : 1;
+          player.vx = knockbackDir * 5;
+          player.vy = -5;
+          e.vx = -e.vx;
+          if (lives <= 0) {
+            triggerGameOver("Ben took fatal damage from an enemy!");
+            ctx.restore();
+            return;
+          }
+        }
+      }
+    }
+
+    // --- DRAGON BOSS AT THE END ("dapat me dragon sa last") ---
+    if (dragonBoss && dragonBoss.alive) {
+      dragonBoss.x += dragonBoss.vx;
+      if (dragonBoss.x < dragonBoss.minX || dragonBoss.x > dragonBoss.maxX) dragonBoss.vx = -dragonBoss.vx;
+
+      // Draw Dragon Boss
+      ctx.save();
+      ctx.translate(dragonBoss.x, dragonBoss.y);
+      if (dragonBoss.vx > 0) {
+        ctx.scale(-1, 1);
+        ctx.translate(-dragonBoss.width, 0);
+      }
+
+      // Dragon Wings
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath();
+      ctx.moveTo(35, 30);
+      ctx.lineTo(10, 0 + Math.sin(Date.now() * 0.008) * 15);
+      ctx.lineTo(55, 15);
+      ctx.closePath();
+      ctx.fill();
+
+      // Dragon Body
+      ctx.fillStyle = dragonBoss.color;
+      ctx.beginPath();
+      ctx.ellipse(45, 45, 36, 26, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Dragon Head & Horns
+      ctx.fillStyle = dragonBoss.color;
+      ctx.beginPath();
+      ctx.ellipse(15, 30, 20, 16, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+      // Horns
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.moveTo(18, 16); ctx.lineTo(10, -2); ctx.lineTo(24, 14); ctx.fill();
+      // Glowing Eye
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(10, 24, 5, 5);
+      // Snout & Teeth
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 34, 4, 4);
+      ctx.fillRect(6, 34, 4, 4);
+
+      // Dragon Spikes on Back
+      ctx.fillStyle = '#ea580c';
+      for (let sp = 25; sp <= 75; sp += 12) {
+        ctx.beginPath();
+        ctx.moveTo(sp, 20); ctx.lineTo(sp + 6, 8); ctx.lineTo(sp + 12, 20); ctx.fill();
+      }
+
+      ctx.restore();
+
+      // Dragon Health Bar (Rendered above dragon)
+      const barW = 100;
+      const barH = 8;
+      const barX = dragonBoss.x - 5;
+      const barY = dragonBoss.y - 20;
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(barX, barY, barW, barH);
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(barX, barY, barW, barH);
+      const hpPct = Math.max(0, dragonBoss.health / dragonBoss.maxHealth);
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(barX + 1, barY + 1, (barW - 2) * hpPct, barH - 2);
+
+      // Dragon Fire Breathing
+      dragonBoss.fireTimer--;
+      if (dragonBoss.fireTimer <= 0) {
+        dragonBoss.fireTimer = 110;
+        audio.dragonRoar();
+        // Fire burst towards player
+        for (let f = 0; f < 3; f++) {
+          setTimeout(() => {
+            if (dragonBoss && dragonBoss.alive) {
+              eggs.push({
+                x: dragonBoss.x - 10,
+                y: dragonBoss.y + 35,
+                vy: (Math.random() - 0.5) * 2,
+                radius: 8,
+                splat: false
+              });
+            }
+          }, f * 120);
+        }
+      }
+
+      // Dragon Touch Player
+      if (
+        player.invulnerable <= 0 &&
+        player.x + player.width > dragonBoss.x + 8 &&
+        player.x < dragonBoss.x + dragonBoss.width - 8 &&
+        player.y + player.height > dragonBoss.y &&
+        player.y < dragonBoss.y + dragonBoss.height
+      ) {
+        lives -= 2;
+        updateHUD();
+        audio.hit();
+        player.invulnerable = 90;
+        player.vx = -8;
+        player.vy = -6;
+        if (lives <= 0) {
+          triggerGameOver("The Dragon Boss overpowered Ben!");
+          ctx.restore();
+          return;
+        }
+      }
+    }
+
+    // --- GOAL: PRINCESS ZOE RESCUE SANCTUARY ---
+    ctx.save();
+    ctx.translate(goal.x, goal.y);
+    ctx.fillStyle = '#ecc94b';
+    ctx.fillRect(-10, 0, 10, goal.height);
+    ctx.fillRect(goal.width, 0, 10, goal.height);
+    ctx.fillRect(-10, -10, goal.width + 20, 10);
+
+    // Princess Zoe Gown & Crown
+    ctx.fillStyle = '#ed64a6';
+    ctx.beginPath();
+    ctx.moveTo(22, 16); ctx.lineTo(8, 54); ctx.lineTo(36, 54); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#fbd38d';
+    ctx.beginPath(); ctx.arc(22, 12, 10, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ecc94b';
+    ctx.beginPath();
+    ctx.moveTo(12, 6); ctx.lineTo(16, 0); ctx.lineTo(22, 4); ctx.lineTo(28, 0); ctx.lineTo(32, 6); ctx.fill();
+    ctx.restore();
+
+    // Check Victory touch (Dragon must be defeated or level goal reached)
+    if (
+      (!dragonBoss || !dragonBoss.alive || dragonBoss.health <= 0) &&
+      player.x + player.width > goal.x &&
+      player.x < goal.x + goal.width &&
+      player.y + player.height > goal.y &&
+      player.y < goal.y + goal.height
+    ) {
+      triggerVictory();
+      ctx.restore();
+      return;
+    }
+
+    // --- DRAW MAIN CHARACTER: BEN THE ADVENTURER ---
+    if (player.invulnerable > 0) player.invulnerable--;
+
+    if (player.invulnerable % 8 < 4) {
+      ctx.save();
+      ctx.translate(player.x, player.y);
+
+      if (!player.facingRight) {
+        ctx.scale(-1, 1);
+        ctx.translate(-player.width, 0);
+      }
+
+      if (player.isSliding) {
+        // --- SLIDING DUCK POSE ---
+        ctx.fillStyle = '#e53e3e'; // Red Vest
+        ctx.fillRect(4, 28, 28, 12);
+        ctx.fillStyle = '#f6ad55'; // Face
+        ctx.beginPath(); ctx.arc(32, 26, 8, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#d69e2e'; // Hat tilted
+        ctx.fillRect(24, 20, 16, 4);
+        ctx.fillStyle = '#2b6cb0'; // Legs sliding forward
+        ctx.fillRect(0, 36, 20, 8);
+      } else {
+        // --- NORMAL STANDING / WALKING POSE ---
+        ctx.fillStyle = '#e53e3e';
+        ctx.fillRect(6, 18, 24, 20);
+
+        ctx.fillStyle = '#744210';
+        ctx.fillRect(6, 33, 24, 5);
+        ctx.fillStyle = '#ecc94b';
+        ctx.fillRect(15, 33, 6, 5);
+
+        ctx.fillStyle = '#f6ad55';
+        ctx.beginPath(); ctx.arc(18, 10, 10, 0, Math.PI * 2); ctx.fill();
+
+        ctx.fillStyle = '#1a202c';
+        ctx.fillRect(22, 8, 3, 4);
+
+        ctx.fillStyle = '#d69e2e';
+        ctx.fillRect(4, 3, 28, 5);
+        ctx.beginPath(); ctx.arc(18, 4, 9, Math.PI, 0); ctx.fill();
+        ctx.fillStyle = '#744210';
+        ctx.fillRect(9, 3, 18, 2);
+
+        ctx.fillStyle = '#2b6cb0';
+        ctx.fillRect(8, 38, 8, 8);
+        ctx.fillRect(20, 38, 8, 8);
+        ctx.fillStyle = '#2d3748';
+        ctx.fillRect(7, 44, 9, 4);
+        ctx.fillRect(19, 44, 9, 4);
+      }
+
+      ctx.restore();
+    }
+
+    // Particles
+    for (let i = sparkles.length - 1; i >= 0; i--) {
+      const s = sparkles[i];
+      s.x += s.vx;
+      s.y += s.vy;
+      s.life--;
+      ctx.fillStyle = s.color;
+      ctx.fillRect(s.x, s.y, 3, 3);
+      if (s.life <= 0) sparkles.splice(i, 1);
+    }
+
+    ctx.restore();
+
+    requestAnimationFrame(gameLoop);
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    resizeCanvas();
+    updateHUD();
+  });
+  window.addEventListener('load', () => {
+    resizeCanvas();
+    updateHUD();
+  });
+</script>
+
+<!-- Google AdMob Full-Screen Interstitial Ad Modal (pub-9786472984542330 / Unit: 6300978111) -->
+<div id="interstitialModal" class="interstitial-overlay" style="display:none;">
+  <div class="interstitial-card">
+    <div class="interstitial-header">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="ad-tag">Google AdMob</span>
+        <span style="font-size:10px; color:#94a3b8;">pub-9786472984542330 &bull; Unit: 6300978111</span>
+      </div>
+      <button type="button" id="btnSkipAd" class="btn-skip-ad" onclick="closeInterstitialAd()" disabled>Skip in 5s</button>
+    </div>
+    <div class="interstitial-body">
+      <div class="interstitial-sponsor-badge">⭐ SPONSORED GAME SHOWCASE</div>
+      <h2 id="interstitialTitle" style="color:#00f0ff; margin:10px 0 6px 0; font-size:20px; font-weight:900;">BEN THE ADVENTURER: ISLAND RESCUE</h2>
+      <p id="interstitialDesc" style="color:#cbd5e1; font-size:12px; max-width:380px; margin:0 auto 12px auto; line-height:1.5;">
+        Laruin ang lahat ng 1,000 Levels sa Android! May Cloud Save, Dragon Boss, at Island Rewards!
+      </p>
+      <div class="interstitial-visual-box">
+        <div class="interstitial-animated-icon">🌴 🐉 👑 🪙</div>
+        <div id="interstitialRewardBadge" style="color:#fde047; font-weight:bold; font-size:13px; margin-top:8px;">
+          REWARD: +100 GOLD COINS &amp; EXTRA HEART
+        </div>
+      </div>
+      <button type="button" class="btn-interstitial-cta" onclick="claimInterstitialReward()">
+        🎁 CLAIM REWARD (+100 COINS)
+      </button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

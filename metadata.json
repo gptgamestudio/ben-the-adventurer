@@ -1,0 +1,6 @@
+{
+  "name": "Ben the Adventurer",
+  "description": "Ben the Adventurer: Island Rescue - 1-Hour Real-Time Platformer with Firebase Firestore Cloud Sync & Game Mate Companion",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

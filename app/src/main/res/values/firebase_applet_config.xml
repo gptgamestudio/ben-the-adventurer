@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="firebase_project_id" translatable="false">super-tank-online</string>
+    <string name="firestore_database_id" translatable="false">(default)</string>
+    <string name="default_web_client_id" translatable="false">368887314668-rkhmq3tqhnpgnaefhscdf9pml0p4vh9i.apps.googleusercontent.com</string>
+</resources>

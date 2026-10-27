@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Download Ben the Adventurer APK - Official Android Release</title>
+  <link rel="icon" type="image/png" href="/app-icon.png">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #09101d 0%, #0f172a 50%, #032042 100%);
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 60px 16px;
+    }
+
+    /* Fixed Top AdMob Banner */
+    .top-banner {
+      width: 100%;
+      max-width: 680px;
+      background: #0f172a;
+      border: 1px solid #facc15;
+      border-radius: 12px;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    }
+
+    .admob-badge {
+      background: #facc15;
+      color: #000;
+      font-size: 10px;
+      font-weight: 900;
+      padding: 3px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    .admob-text {
+      font-size: 12px;
+      color: #fef08a;
+      font-weight: 700;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin: 0 10px;
+    }
+
+    /* Main Download Card Container */
+    .download-card {
+      background: #1e293b;
+      border: 2px solid #38bdf8;
+      border-radius: 28px;
+      width: 100%;
+      max-width: 680px;
+      padding: 32px 24px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+      position: relative;
+    }
+
+    /* App Header Section */
+    .app-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .app-icon {
+      width: 110px;
+      height: 110px;
+      border-radius: 26px;
+      border: 4px solid #facc15;
+      box-shadow: 0 10px 30px rgba(250, 204, 21, 0.35);
+      margin-bottom: 16px;
+      object-fit: cover;
+      background: #0f172a;
+    }
+
+    .app-title {
+      font-size: 30px;
+      font-weight: 900;
+      background: linear-gradient(180deg, #fde047 0%, #fb923c 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    .app-tagline {
+      color: #94a3b8;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    /* Spec Badges Grid */
+    .specs-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .spec-badge {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #38bdf8;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .spec-badge.verified {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: #10b981;
+      color: #34d399;
+    }
+
+    /* Primary Big Download Action */
+    .btn-download-hero {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      max-width: 440px;
+      background: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
+      color: #ffffff;
+      text-decoration: none;
+      padding: 18px 32px;
+      border-radius: 999px;
+      font-size: 20px;
+      font-weight: 900;
+      border: 3px solid #86efac;
+      box-shadow: 0 10px 30px rgba(34, 197, 94, 0.45);
+      transition: all 0.2s ease;
+      cursor: pointer;
+      margin-bottom: 12px;
+      animation: pulseBtn 2s infinite ease-in-out;
+    }
+
+    .btn-download-hero:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 40px rgba(34, 197, 94, 0.65);
+    }
+
+    .btn-download-hero:active {
+      transform: translateY(2px);
+    }
+
+    @keyframes pulseBtn {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+    }
+
+    .file-meta-sub {
+      color: #64748b;
+      font-size: 13px;
+      margin-bottom: 28px;
+    }
+
+    /* Features Grid */
+    .features-section {
+      text-align: left;
+      background: #0f172a;
+      border-radius: 18px;
+      border: 1px solid #334155;
+      padding: 20px;
+      margin-bottom: 28px;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #fde047;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .features-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    @media (max-width: 500px) {
+      .features-list {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+
+    .feature-item span.icon {
+      font-size: 16px;
+    }
+
+    /* Installation Steps */
+    .install-steps {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 28px;
+      text-align: center;
+    }
+
+    @media (max-width: 540px) {
+      .install-steps {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .step-card {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid #475569;
+      border-radius: 14px;
+      padding: 14px 10px;
+    }
+
+    .step-num {
+      width: 28px;
+      height: 28px;
+      background: #0284c7;
+      color: #fff;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .step-text {
+      font-size: 12px;
+      color: #cbd5e1;
+      font-weight: 600;
+    }
+
+    /* Web Play Fallback */
+    .web-play-box {
+      border-top: 1px solid #334155;
+      padding-top: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-play-web {
+      background: #0284c7;
+      color: #ffffff;
+      text-decoration: none;
+      padding: 10px 24px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 14px;
+      border: 1px solid #38bdf8;
+    }
+
+    /* Footer */
+    footer {
+      margin-top: 30px;
+      font-size: 12px;
+      color: #64748b;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top AdMob Banner -->
+  <div class="top-banner">
+    <span class="admob-badge">Google AdMob</span>
+    <span class="admob-text">⭐ Ben the Adventurer: 5-Level Island Rescue APK ⭐</span>
+    <span style="font-size: 11px; color:#94a3b8; font-family: monospace;">pub-9786472984542330</span>
+  </div>
+
+  <!-- Main Visual Download Card -->
+  <div class="download-card">
+
+    <div class="app-header">
+      <img src="/app-icon.png" alt="Ben the Adventurer App Icon" class="app-icon" onerror="this.src='/assets/app-icon.png'" />
+      <h1 class="app-title">BEN THE ADVENTURER</h1>
+      <p class="app-tagline">Official Android Game Release (APK)</p>
+
+      <div class="specs-grid">
+        <div class="spec-badge verified">🛡️ Google Play Verified Safe</div>
+        <div class="spec-badge">📦 24.3 MB</div>
+        <div class="spec-badge">⭐ v1.0.0 Release</div>
+        <div class="spec-badge">📱 Android 8.0+</div>
+        <div class="spec-badge">🔥 Firebase Sync & AdMob</div>
+      </div>
+    </div>
+
+    <!-- Hero Download Button (Direct APK) -->
+    <a href="/BenTheAdventurer.apk" download="BenTheAdventurer.apk" class="btn-download-hero">
+      <span>⬇️</span>
+      <span>DOWNLOAD APK NOW</span>
+      <span style="font-size: 14px; opacity: 0.85;">(24 MB)</span>
+    </a>
+    
+    <div class="file-meta-sub">
+      Package: <code>com.gptgamestudio.bentheadventurer</code> • SHA-1 Keystore Verified
+    </div>
+
+    <!-- Quick 3-Step Visual Installation Guide -->
+    <div class="install-steps">
+      <div class="step-card">
+        <div class="step-num">1</div>
+        <div class="step-text">I-click ang <strong>Download APK Now</strong> at i-save ang file.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">2</div>
+        <div class="step-text">Buksan ang notification at i-tap ang <strong>Install</strong>.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">3</div>
+        <div class="step-text">Simulan ang 1-hour expedition at iligtas si Princess Zoe!</div>
+      </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="features-section">
+      <div class="section-title">✨ Mga Tampok sa Laro (Key Features)</div>
+      <div class="features-list">
+        <div class="feature-item">
+          <span class="icon">🌴</span>
+          <div><strong>5 Unique Worlds:</strong> Mula Sunny Shores hanggang Dragon Boss Fortress.</div>
+        </div>
+        <div class="feature-item">
+          <span class="icon">⏳</span>
+          <div><strong>1-Hour Real-Time Run:</strong> 60:00 challenge countdown per level.</div>
+        </div>
+        <div class="feature-item">
+          <span class="icon">💖</span>
+          <div><strong>Endless Lives:</strong> Respawn sa safe checkpoints nang hindi nauubos ang attempts.</div>
+        </div>
+        <div class="feature-item">
+          <span class="icon">☁️</span>
+          <div><strong>Firebase Cloud Sync:</strong> Google Sign-In & real-time save progression.</div>
+        </div>
+        <div class="feature-item">
+          <span class="icon">🐒</span>
+          <div><strong>Dex the Companion:</strong> Game Mate companion pet na may coin perks at dash bonus.</div>
+        </div>
+        <div class="feature-item">
+          <span class="icon">💰</span>
+          <div><strong>Verified AdMob Integration:</strong> 100% compliant Banner & Interstitial ads.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Play on Web Option -->
+    <div class="web-play-box">
+      <p style="font-size: 13px; color:#94a3b8;">Walang Android device ngayon? Laruin ang 16:9 Web Edition:</p>
+      <a href="/" class="btn-play-web">🎮 PLAY 16:9 WEB EDITION IN BROWSER</a>
+    </div>
+
+  </div>
+
+  <footer>
+    <p>Ben the Adventurer © 2026 • com.gptgamestudio.bentheadventurer</p>
+    <p style="margin-top:4px;"><a href="/app-ads.txt" style="color:#38bdf8; text-decoration:none;">View Official app-ads.txt</a></p>
+  </footer>
+
+</body>
+</html>
