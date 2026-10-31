@@ -1,0 +1,31 @@
+{
+  "name": "ben-the-adventurer-backend",
+  "version": "1.0.0",
+  "description": "Production REST API Backend for Ben the Adventurer: Island Rescue Mobile APK and Web App",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test"
+  },
+  "keywords": [
+    "game-backend",
+    "express",
+    "firebase",
+    "mongodb",
+    "admob",
+    "game-save"
+  ],
+  "author": "GPT Game Studio",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "firebase-admin": "^14.5.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0"
+  }
+}

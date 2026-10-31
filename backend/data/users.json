@@ -1,0 +1,30 @@
+{
+  "user_1792743802905_0xtmqh": {
+    "id": "user_1792743802905_0xtmqh",
+    "username": "BenExplorer_AutoInput",
+    "email": "",
+    "googleId": null,
+    "avatar": "default",
+    "companion": {
+      "name": "Dex the Monkey",
+      "level": 1,
+      "bonus": "+10% Speed"
+    },
+    "createdAt": 1792743802906,
+    "updatedAt": 1792743802906
+  },
+  "user_1792743830655_by3kpp": {
+    "id": "user_1792743830655_by3kpp",
+    "username": "BenExplorer_AutoInput",
+    "email": "",
+    "googleId": null,
+    "avatar": "default",
+    "companion": {
+      "name": "Dex the Monkey",
+      "level": 1,
+      "bonus": "+10% Speed"
+    },
+    "createdAt": 1792743830655,
+    "updatedAt": 1792743830655
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "user_1792743802905_0xtmqh": {
+    "userId": "user_1792743802905_0xtmqh",
+    "username": "BenExplorer_AutoInput",
+    "levelIndex": 2,
+    "timerSeconds": 3200,
+    "totalPlayedSeconds": 400,
+    "overtimeSeconds": 0,
+    "score": 2500,
+    "coinsCount": 45,
+    "deathCount": 0,
+    "checkpoint": {
+      "x": 80,
+      "y": 300
+    },
+    "isVictory": false,
+    "updatedAt": 1792743802906
+  },
+  "user_1792743830655_by3kpp": {
+    "userId": "user_1792743830655_by3kpp",
+    "username": "BenExplorer_AutoInput",
+    "levelIndex": 2,
+    "timerSeconds": 3200,
+    "totalPlayedSeconds": 400,
+    "overtimeSeconds": 0,
+    "score": 2500,
+    "coinsCount": 45,
+    "deathCount": 0,
+    "checkpoint": {
+      "x": 80,
+      "y": 300
+    },
+    "isVictory": false,
+    "updatedAt": 1792743831213
+  }
+}

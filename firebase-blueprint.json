@@ -1,0 +1,37 @@
+{
+  "entities": {
+    "adventurer_profiles": {
+      "title": "Adventurer Profiles",
+      "description": "User adventurer game stats, 1-hour run time, coins and princess rescues",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "playerName": { "type": "string" },
+        "email": { "type": "string" },
+        "totalScore": { "type": "integer" },
+        "coins": { "type": "integer" },
+        "highestDistanceMeters": { "type": "integer" },
+        "princessClaraRescues": { "type": "integer" },
+        "totalPlayTimeSeconds": { "type": "number" },
+        "isOneHourMilestoneAchieved": { "type": "boolean" },
+        "currentWorld": { "type": "string" },
+        "updatedAt": { "type": "integer" }
+      },
+      "required": ["userId"]
+    },
+    "game_mates": {
+      "title": "Game Mate Companions",
+      "description": "Companion pet stats, perks, and real-time cloud sync",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "playerName": { "type": "string" },
+        "companionName": { "type": "string" },
+        "companionLevel": { "type": "integer" },
+        "companionBonus": { "type": "string" },
+        "updatedAt": { "type": "integer" }
+      },
+      "required": ["userId"]
+    }
+  }
+}

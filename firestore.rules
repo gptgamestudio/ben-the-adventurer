@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Adventurer profile (scores, coins, distance, level progress, 1-hour milestones)
+    match /adventurer_profiles/{userId} {
+      allow read: if true;
+      allow write: if isOwner(userId) || request.auth == null;
+    }
+
+    // Cloud Game saves & checkpoints per username / user
+    match /game_saves/{userId} {
+      allow read: if true;
+      allow write: if isOwner(userId) || request.auth == null;
+    }
+
+    // Game Mate Companion sync (companion levels, bonuses, custom perks)
+    match /game_mates/{userId} {
+      allow read: if true;
+      allow write: if isOwner(userId) || request.auth == null;
+    }
+
+    // User account metadata
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if isOwner(userId) || request.auth == null;
+    }
+
+    // Global leaderboards
+    match /leaderboard/{entryId} {
+      allow read, write: if true;
+    }
+
+    match /leaderboards/{worldId}/entries/{entryId} {
+      allow read, write: if true;
+    }
+  }
+}

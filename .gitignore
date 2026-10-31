@@ -1,0 +1,22 @@
+# Gradle & Build caches
+.gradle/
+build/
+app/build/
+.kotlin/
+.build-outputs/
+
+# Large temporary APK copies (keep the clean named APKs)
+zzz_*.apk
+app-debug.apk
+
+# Environment & local secrets
+.env
+local.properties
+debug.keystore
+debug.keystore.base64
+
+# Keep the official release APKs and public/docs files!
+!BenTheAdventurer.apk
+!public/BenTheAdventurer.apk
+!docs/BenTheAdventurer.apk
+push_to_github.sh

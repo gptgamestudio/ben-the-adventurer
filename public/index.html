@@ -1,0 +1,1619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Ben The Adventurer - 1,000 Levels Mobile Platformer</title>
+  <link rel="icon" type="image/png" href="/app-icon.png">
+  <!-- Phaser 3 Official CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+  <style>
+    /* ==========================================================================
+       1. CORE CSS RESET & 16:9 LANDSCAPE VIEWPORT
+       ========================================================================== */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #020617;
+      font-family: 'Comic Sans MS', 'Chalkboard SE', 'Arial Rounded MT Bold', sans-serif, system-ui;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* 16:9 Landscape Responsive Game Outer Container */
+    #game-container {
+      position: relative;
+      width: 100vw;
+      height: 56.25vw; /* 16:9 Aspect Ratio */
+      max-height: 100vh;
+      max-width: 177.78vh; /* 16:9 Aspect Ratio */
+      background: #000000;
+      box-shadow: 0 10px 45px rgba(0, 0, 0, 0.85);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* The Pure Phaser 3 Gameplay Canvas Zone (CLEAN TOP, strictly UNOBSTRUCTED) */
+    #phaser-game-canvas {
+      position: relative;
+      width: 100%;
+      flex: 1; /* Takes all remaining height above the bottom HUD */
+      background: #0f172a;
+      overflow: hidden;
+    }
+
+    #phaser-game-canvas canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    /* ==========================================================================
+       2. BOTTOM HUD & ADMOB BANNER BAR (Strictly Locked at Very Bottom)
+       ========================================================================== */
+    #bottom-bar {
+      position: relative;
+      width: 100%;
+      height: 54px;
+      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+      border-top: 2.5px solid #38bdf8;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      z-index: 90;
+      box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.5);
+    }
+
+    .bottom-hud-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hud-pill {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1.5px solid #facc15;
+      border-radius: 20px;
+      padding: 3px 8px;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.15);
+      white-space: nowrap;
+    }
+
+    .hud-pill.lives {
+      border-color: #ef4444;
+      color: #fca5a5;
+    }
+
+    .hud-pill.timer {
+      border-color: #22c55e;
+      color: #86efac;
+      font-family: monospace;
+      font-size: 12px;
+    }
+
+    .hud-pill.timer.warning {
+      border-color: #ef4444;
+      color: #ef4444;
+      animation: timerAlertPulse 0.8s infinite alternate;
+    }
+
+    @keyframes timerAlertPulse {
+      0% { transform: scale(1); background: rgba(239, 68, 68, 0.2); }
+      100% { transform: scale(1.08); background: rgba(239, 68, 68, 0.5); }
+    }
+
+    .hud-pill.powerup {
+      border-color: #a855f7;
+      color: #e9d5ff;
+    }
+
+    .hud-pill.zone-info {
+      border-color: #38bdf8;
+      color: #bae6fd;
+      font-size: 10px;
+    }
+
+    /* AdMob Center Banner Bar */
+    .admob-banner-box {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #020617;
+      border: 1px solid #eab308;
+      border-radius: 6px;
+      padding: 3px 8px;
+      max-width: 320px;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .admob-badge {
+      background: #eab308;
+      color: #000;
+      font-size: 8px;
+      font-weight: 900;
+      padding: 2px 4px;
+      border-radius: 3px;
+      letter-spacing: 0.5px;
+    }
+
+    .admob-tag {
+      font-size: 9px;
+      color: #fef08a;
+      font-weight: bold;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .hud-btn-dashboard {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #ffffff;
+      border: 1.5px solid #fde047;
+      border-radius: 12px;
+      padding: 4px 10px;
+      font-size: 10px;
+      font-weight: 900;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+      transition: transform 0.1s;
+    }
+
+    .hud-btn-dashboard:active {
+      transform: scale(0.94);
+    }
+
+    /* ==========================================================================
+       3. COMPACT FLOATING ON-SCREEN TOUCH CONTROLS (Floating above bottom bar)
+       ========================================================================== */
+    #touch-controls {
+      position: absolute;
+      bottom: 64px; /* Floats safely above the 54px bottom bar */
+      left: 0;
+      width: 100%;
+      padding: 0 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      z-index: 80;
+      pointer-events: none;
+    }
+
+    /* Left Side: Compact Dark Circular Floating Action Controller (D-Pad) */
+    .floating-dpad {
+      width: 108px;
+      height: 108px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #1e293b 0%, #090d16 100%);
+      border: 2.5px solid #38bdf8;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7), inset 0 2px 6px rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 4px;
+      position: relative;
+      pointer-events: auto;
+      touch-action: none;
+    }
+
+    .dpad-arrow-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(180deg, #334155, #0f172a);
+      border: 1.5px solid #64748b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 20px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.5);
+      transition: transform 0.06s, background 0.06s;
+    }
+
+    .dpad-arrow-btn:active, .dpad-arrow-btn.pressed {
+      transform: scale(0.9);
+      background: #0284c7;
+      border-color: #38bdf8;
+      color: #fde047;
+    }
+
+    .dpad-hub-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #0f172a;
+      border: 1.5px solid #475569;
+      pointer-events: none;
+    }
+
+    /* Right Side: Compact Dark Red Jump (A) & Shoot (B) Action Buttons */
+    .floating-actions {
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+      pointer-events: auto;
+      touch-action: none;
+    }
+
+    .action-circle-btn {
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+      transition: transform 0.06s;
+    }
+
+    .action-circle-btn:active, .action-circle-btn.pressed {
+      transform: scale(0.9);
+    }
+
+    .btn-shoot {
+      width: 54px;
+      height: 54px;
+      background: linear-gradient(135deg, #7c3aed, #4c1d95);
+      border: 2.5px solid #c084fc;
+    }
+
+    .btn-shoot.fire {
+      background: linear-gradient(135deg, #ea580c, #9a3412);
+      border-color: #fdba74;
+    }
+
+    .btn-shoot.ice {
+      background: linear-gradient(135deg, #0284c7, #075985);
+      border-color: #7dd3fc;
+    }
+
+    .btn-shoot.laser {
+      background: linear-gradient(135deg, #059669, #064e3b);
+      border-color: #6ee7b7;
+    }
+
+    .btn-jump {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, #dc2626, #7f1d1d); /* Dark Red */
+      border: 3px solid #f87171;
+    }
+
+    .btn-main-label {
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1.1;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    }
+
+    .btn-sub-label {
+      font-size: 9px;
+      font-weight: bold;
+      opacity: 0.85;
+    }
+
+    /* ==========================================================================
+       4. HTML OVERLAYS: DASHBOARD, NEXT LEVEL BANNER, INTERSTITIAL AD
+       ========================================================================== */
+    .game-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      padding: 16px;
+    }
+
+    .game-overlay.active {
+      display: flex;
+    }
+
+    .dialog-card {
+      background: #1e293b;
+      border: 3px solid #facc15;
+      border-radius: 20px;
+      padding: 20px 28px;
+      max-width: 500px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.7);
+    }
+
+    .dialog-title {
+      font-size: 26px;
+      font-weight: 900;
+      background: linear-gradient(180deg, #facc15 0%, #ea580c 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+
+    .btn-bubbly {
+      border: none;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 900;
+      padding: 10px 22px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: transform 0.1s;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+
+    .btn-bubbly:active {
+      transform: scale(0.95);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #22c55e, #15803d);
+      color: #ffffff;
+      border: 2px solid #86efac;
+    }
+
+    .btn-secondary {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: #ffffff;
+      border: 2px solid #7dd3fc;
+    }
+
+    /* Next Level Auto-Advance Banner Overlay */
+    #next-level-banner {
+      position: absolute;
+      top: 35%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(15, 23, 42, 0.95);
+      border: 4px solid #4ade80;
+      border-radius: 24px;
+      padding: 18px 36px;
+      text-align: center;
+      z-index: 120;
+      display: none;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.85);
+      animation: popInBanner 0.4s ease-out;
+    }
+
+    @keyframes popInBanner {
+      0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
+      100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+
+    /* Interstitial Ad Break Modal */
+    #interstitial-modal {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.96);
+      z-index: 150;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==========================================================================
+       MAIN 16:9 GAME CONTAINER
+       ========================================================================== -->
+  <div id="game-container">
+
+    <!-- 1. CLEAN TOP GAMEPLAY ZONE (Strictly Unobstructed Canvas) -->
+    <div id="phaser-game-canvas"></div>
+
+    <!-- 2. COMPACT FLOATING ON-SCREEN TOUCH CONTROLS (Above Bottom Bar) -->
+    <div id="touch-controls">
+      <!-- Left: Compact Dark Circular Floating D-Pad -->
+      <div class="floating-dpad" id="dpad-controller">
+        <button class="dpad-arrow-btn" id="touch-left" title="Left">◀</button>
+        <div class="dpad-hub-center"></div>
+        <button class="dpad-arrow-btn" id="touch-right" title="Right">▶</button>
+      </div>
+
+      <!-- Right: Compact Dark Red Jump (A) & Power-Up Shoot (B) Buttons -->
+      <div class="floating-actions">
+        <button class="action-circle-btn btn-shoot" id="touch-shoot" title="Shoot Power-Up (B)">
+          <span class="btn-main-label" id="shoot-label">FIRE</span>
+          <span class="btn-sub-label">(B)</span>
+        </button>
+        <button class="action-circle-btn btn-jump" id="touch-jump" title="Jump (A)">
+          <span class="btn-main-label">JUMP</span>
+          <span class="btn-sub-label">(A)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 3. BOTTOM HUD & ADMOB BANNER BAR (Strictly Locked at Very Bottom) -->
+    <div id="bottom-bar">
+      <!-- Left Stats: 10 Lives, 5-Min Timer, Active Power-Up -->
+      <div class="bottom-hud-group">
+        <div class="hud-pill lives" id="hud-lives">❤️ x10</div>
+        <div class="hud-pill timer" id="hud-timer">⏱️ 05:00</div>
+        <div class="hud-pill powerup" id="hud-powerup">⚡ BLASTER</div>
+      </div>
+
+      <!-- Center: AdMob Banner Bar (pub-9786472984542330) -->
+      <div class="admob-banner-box" onclick="openApkModal()">
+        <span class="admob-badge">AdMob</span>
+        <span class="admob-tag">⭐ Ben The Adventurer: Official Android APK ⭐</span>
+      </div>
+
+      <!-- Right Stats: Zone/Level, Coins, Score, Dashboard Pause Button -->
+      <div class="bottom-hud-group">
+        <div class="hud-pill zone-info" id="hud-zone">LVL 1 • Emerald</div>
+        <div class="hud-pill" id="hud-coins" style="border-color:#facc15; color:#fde047;">🪙 000</div>
+        <div class="hud-pill" id="hud-score" style="border-color:#38bdf8;">⭐ 0000</div>
+        <button class="hud-btn-dashboard" onclick="openDashboard()">
+          ⏸ DASH
+        </button>
+      </div>
+    </div>
+
+    <!-- ==========================================================================
+         NEXT LEVEL AUTO-ADVANCE BANNER (3-Second Seamless Transition)
+         ========================================================================== -->
+    <div id="next-level-banner">
+      <div style="font-size:36px; margin-bottom:4px;">👑 🏆 🌟</div>
+      <h2 style="color:#4ade80; font-size:24px; font-weight:900;">LEVEL CLEARED!</h2>
+      <p id="next-level-text" style="color:#cbd5e1; font-size:13px; margin:6px 0;">Princess Rescued! Advancing in 3 seconds...</p>
+      <div style="font-size:11px; color:#facc15; font-weight:bold;">Progress Auto-Saved!</div>
+    </div>
+
+    <!-- ==========================================================================
+         OVERLAY: DASHBOARD / PAUSE SCREEN (Persistent Level Selection & Continue)
+         ========================================================================== -->
+    <div id="screen-dashboard" class="game-overlay">
+      <div class="dialog-card">
+        <div style="font-size:38px; margin-bottom:4px;">🌴 ⚔️ 👑</div>
+        <h1 class="dialog-title">BEN THE ADVENTURER</h1>
+        <p style="color:#94a3b8; font-size:12px; margin-bottom:14px;">1,000 Levels • 5 Sequential Zones • Permanent Power-Ups</p>
+
+        <div style="background:#0f172a; border-radius:12px; padding:12px; margin-bottom:14px; text-align:left; border:1px solid #334155;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:13px;">
+            <span style="color:#94a3b8;">Current Progress:</span>
+            <strong id="dash-current-level" style="color:#4ade80;">Level 1 (Emerald Grasslands)</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:13px;">
+            <span style="color:#94a3b8;">Highest Unlocked:</span>
+            <strong id="dash-highest-level" style="color:#38bdf8;">Level 1</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:13px;">
+            <span style="color:#94a3b8;">Power-Up Weapon:</span>
+            <strong id="dash-powerup" style="color:#c084fc;">None</strong>
+          </div>
+        </div>
+
+        <!-- Dashboard Action Buttons -->
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <button class="btn-bubbly btn-primary" onclick="resumeGame()">
+            ▶️ RESUME / CONTINUE GAME
+          </button>
+          <button class="btn-bubbly btn-secondary" onclick="toggleMuteAudio()" id="dash-mute-btn">
+            🔊 Sound Effects: ON
+          </button>
+          <button class="btn-bubbly" style="background:#10b981; color:#fff;" onclick="openApkModal()">
+            📲 DOWNLOAD ANDROID APK (24MB)
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================================================
+         OVERLAY: INTERSTITIAL AD BREAK (Every 2 Deaths)
+         ========================================================================== -->
+    <div id="interstitial-modal" class="game-overlay">
+      <div class="dialog-card" style="border-color:#38bdf8; max-width:440px;">
+        <span class="admob-badge" style="font-size:10px; padding:3px 6px;">Google AdMob Interstitial</span>
+        <h2 style="color:#fde047; font-size:20px; margin:10px 0 6px 0;">Kid-Safe Ad Break</h2>
+        <p style="color:#94a3b8; font-size:13px; margin-bottom:14px;">
+          Ben is catching his breath! Game will auto-resume at the locked level in:
+        </p>
+        <div id="interstitial-timer" style="font-size:36px; font-weight:900; color:#38bdf8; margin-bottom:14px;">3</div>
+        <button id="interstitial-close-btn" class="btn-bubbly btn-primary" style="display:none;" onclick="closeInterstitial()">
+          RESUME GAME NOW ⏩
+        </button>
+      </div>
+    </div>
+
+    <!-- ==========================================================================
+         OVERLAY: VISUAL APK DOWNLOAD MODAL
+         ========================================================================== -->
+    <div id="apk-modal" class="game-overlay">
+      <div class="dialog-card" style="border-color:#10b981; max-width:420px;">
+        <img src="/app-icon.png" alt="App Icon" style="width:68px; height:68px; border-radius:16px; border:2px solid #facc15; margin-bottom:8px;" onerror="this.src='/assets/app-icon.png'" />
+        <h2 style="color:#f8fafc; font-size:20px; margin-bottom:4px;">BEN THE ADVENTURER</h2>
+        <div style="font-size:11px; color:#10b981; font-weight:bold; background:#064e3b; padding:4px 10px; border-radius:999px; display:inline-block; margin-bottom:12px;">
+          📦 24.3 MB • Android APK • 60 FPS
+        </div>
+        <p style="color:#94a3b8; font-size:13px; margin-bottom:16px;">
+          Install the native APK for high performance, smooth touch controls, and offline gameplay!
+        </p>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <a href="/BenTheAdventurer.apk" download="BenTheAdventurer.apk" class="btn-bubbly btn-primary" style="text-decoration:none;">
+            ⬇️ DOWNLOAD APK DIRECTLY
+          </a>
+          <button class="btn-bubbly" style="background:#334155; color:#cbd5e1;" onclick="closeApkModal()">
+            ✕ Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div> <!-- End Game Container -->
+
+  <!-- ==========================================================================
+       5. PURE WEB AUDIO API 8-BIT SYNTHESIZER
+       ========================================================================== -->
+  <script>
+    class WebAudioSynth {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+        this.bgmTimer = null;
+        this.bgmStep = 0;
+        this.melody = [261.63, 0, 329.63, 392.00, 523.25, 0, 392.00, 0, 349.23, 0, 440.00, 523.25, 587.33, 0, 523.25, 0];
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) this.ctx = new AudioContext();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      playTone(freq, type, duration, startVol = 0.2, endVol = 0.001) {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          gain.gain.setValueAtTime(startVol, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(endVol, this.ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch(e) {}
+      }
+      jump() {
+        this.init();
+        if (this.muted || !this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(520, this.ctx.currentTime + 0.16);
+          gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.16);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.16);
+        } catch(e) {}
+      }
+      shoot(type) {
+        if (type === 'fireball') {
+          this.playTone(340, 'sawtooth', 0.12, 0.22);
+          setTimeout(() => this.playTone(180, 'triangle', 0.1, 0.2), 40);
+        } else if (type === 'ice') {
+          this.playTone(780, 'sine', 0.15, 0.2);
+          setTimeout(() => this.playTone(1100, 'triangle', 0.1, 0.15), 50);
+        } else if (type === 'laser') {
+          this.playTone(920, 'square', 0.14, 0.18);
+        } else {
+          // Machine gun / basic
+          this.playTone(450, 'square', 0.08, 0.15);
+        }
+      }
+      coin() {
+        this.playTone(987.77, 'triangle', 0.1, 0.2);
+        setTimeout(() => this.playTone(1318.51, 'triangle', 0.16, 0.2), 70);
+      }
+      powerup() {
+        [440, 554.37, 659.25, 880].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'sine', 0.12, 0.22), i * 60);
+        });
+      }
+      stomp() {
+        this.playTone(280, 'sawtooth', 0.12, 0.25);
+        setTimeout(() => this.playTone(120, 'triangle', 0.1, 0.2), 50);
+      }
+      bossHit() {
+        this.playTone(110, 'sawtooth', 0.16, 0.35);
+      }
+      bossAlarm() {
+        this.playTone(440, 'square', 0.2, 0.25);
+        setTimeout(() => this.playTone(330, 'square', 0.2, 0.25), 180);
+      }
+      timerAlarm() {
+        this.playTone(880, 'sine', 0.08, 0.2);
+      }
+      hurt() {
+        this.playTone(100, 'sawtooth', 0.2, 0.3);
+      }
+      victory() {
+        [523.25, 659.25, 783.99, 1046.50, 1318.51].forEach((f, i) => {
+          setTimeout(() => this.playTone(f, 'triangle', 0.22, 0.3), i * 90);
+        });
+      }
+      startBgm() {
+        if (this.bgmTimer) return;
+        this.bgmTimer = setInterval(() => {
+          if (this.muted || !gameInstance || !gameInstance.scene.isActive('GameScene')) return;
+          const note = this.melody[this.bgmStep % this.melody.length];
+          if (note > 0) this.playTone(note, 'square', 0.08, 0.035, 0.001);
+          this.bgmStep++;
+        }, 140);
+      }
+      stopBgm() {
+        if (this.bgmTimer) {
+          clearInterval(this.bgmTimer);
+          this.bgmTimer = null;
+        }
+      }
+    }
+    const soundSynth = new WebAudioSynth();
+  </script>
+
+  <!-- ==========================================================================
+       6. 1,000 LEVELS PERSISTENCE & ZONE CONFIGURATION
+       ========================================================================== -->
+  <script>
+    const SAVE_KEY = 'ben_adventurer_save_v2';
+    
+    // Default Persistent State
+    let gameState = {
+      currentLevel: 1,
+      highestUnlockedLevel: 1,
+      lives: 10,
+      score: 0,
+      coins: 0,
+      activePowerUp: null, // 'fireball' | 'ice' | 'laser' | 'machinegun'
+      deathCount: 0
+    };
+
+    // Load from LocalStorage
+    function loadSave() {
+      try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed.currentLevel === 'number') {
+            gameState = Object.assign(gameState, parsed);
+          }
+        }
+      } catch(e) {}
+    }
+
+    function saveGame() {
+      try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify(gameState));
+      } catch(e) {}
+    }
+
+    loadSave();
+
+    // 5 Sequential Area Zones Definition (Strictly 200 Levels Each)
+    const ZONES = [
+      { id: 1, name: "Emerald Grasslands", minLevel: 1, maxLevel: 200, sky: [0x38bdf8, 0xbbf7d0], ground: 0x16a34a, platformBorder: 0x4ade80 },
+      { id: 2, name: "Candy Kingdom", minLevel: 201, maxLevel: 400, sky: [0xf472b6, 0xfce7f3], ground: 0xdb2777, platformBorder: 0xf9a8d4 },
+      { id: 3, name: "Sky Castle", minLevel: 401, maxLevel: 600, sky: [0x818cf8, 0xe0e7ff], ground: 0x4f46e5, platformBorder: 0xa5b4fc },
+      { id: 4, name: "Desert Oasis", minLevel: 601, maxLevel: 800, sky: [0xf97316, 0xfef08a], ground: 0xc2410c, platformBorder: 0xfde047 },
+      { id: 5, name: "Lava Citadel", minLevel: 801, maxLevel: 1000, sky: [0x7f1d1d, 0xea580c], ground: 0x991b1b, platformBorder: 0xf97316 }
+    ];
+
+    function getZoneForLevel(lvl) {
+      const clamped = Math.max(1, Math.min(1000, lvl));
+      const zIdx = Math.floor((clamped - 1) / 200);
+      return ZONES[Math.min(ZONES.length - 1, zIdx)];
+    }
+
+    function isBossLevel(lvl) {
+      return lvl === 200 || lvl === 400 || lvl === 600 || lvl === 800 || lvl === 1000;
+    }
+  </script>
+
+  <!-- ==========================================================================
+       7. PHASER 3 GAME ENGINE & SCENES
+       ========================================================================== -->
+  <script>
+    let gameInstance = null;
+    let currentGameScene = null;
+
+    // --- SCENE 1: BOOT & PROCEDURAL TEXTURE GENERATION ---
+    class BootScene extends Phaser.Scene {
+      constructor() {
+        super({ key: 'BootScene' });
+      }
+
+      preload() {
+        // Preload CC0 Kenney Sprites if present
+        this.load.image('player_stand', '/assets/sprites/adventurer_stand.png');
+        this.load.image('player_jump', '/assets/sprites/adventurer_jump.png');
+        this.load.image('player_hurt', '/assets/sprites/adventurer_hurt.png');
+        this.load.image('princess', '/assets/sprites/female_cheer1.png');
+        this.load.image('slime', '/assets/sprites/slimeGreen.png');
+        this.load.image('snail', '/assets/sprites/snail.png');
+        this.load.image('bee', '/assets/sprites/bee.png');
+        this.load.image('frog', '/assets/sprites/frog.png');
+      }
+
+      create() {
+        // Generate crisp procedural graphics fallbacks
+        this.generateProceduralAssets();
+        this.scene.start('GameScene');
+      }
+
+      generateProceduralAssets() {
+        const gfx = this.make.graphics({ x: 0, y: 0, add: false });
+
+        // Hero Fallback
+        if (!this.textures.exists('player_stand')) {
+          gfx.clear();
+          gfx.fillStyle(0x0284c7, 1); gfx.fillRoundedRect(4, 16, 24, 28, 4);
+          gfx.fillStyle(0xfed7aa, 1); gfx.fillCircle(16, 12, 10);
+          gfx.fillStyle(0xeab308, 1); gfx.fillRect(6, 4, 20, 6);
+          gfx.generateTexture('player_stand', 32, 48);
+        }
+
+        // Projectile: Fireball
+        gfx.clear();
+        gfx.fillStyle(0xf97316, 1); gfx.fillCircle(10, 10, 8);
+        gfx.fillStyle(0xfde047, 1); gfx.fillCircle(9, 9, 4);
+        gfx.generateTexture('proj_fireball', 20, 20);
+
+        // Projectile: Ice Shard
+        gfx.clear();
+        gfx.fillStyle(0x38bdf8, 1); gfx.fillCircle(8, 8, 7);
+        gfx.fillStyle(0xffffff, 1); gfx.fillCircle(7, 7, 3);
+        gfx.generateTexture('proj_ice', 16, 16);
+
+        // Projectile: Laser Bolt
+        gfx.clear();
+        gfx.fillStyle(0x4ade80, 1); gfx.fillRoundedRect(0, 4, 22, 6, 3);
+        gfx.fillStyle(0xffffff, 1); gfx.fillRoundedRect(4, 5, 14, 4, 2);
+        gfx.generateTexture('proj_laser', 22, 14);
+
+        // Projectile: Rapid Bullet
+        gfx.clear();
+        gfx.fillStyle(0xfacc15, 1); gfx.fillCircle(6, 6, 5);
+        gfx.generateTexture('proj_rapid', 12, 12);
+
+        // Boss Boulder
+        gfx.clear();
+        gfx.fillStyle(0x78350f, 1); gfx.fillCircle(16, 16, 15);
+        gfx.fillStyle(0xb45309, 1); gfx.fillCircle(12, 12, 8);
+        gfx.generateTexture('proj_boulder', 32, 32);
+
+        // Power-Up Crates
+        ['fireball', 'ice', 'laser', 'machinegun'].forEach(type => {
+          gfx.clear();
+          const col = type === 'fireball' ? 0xea580c : type === 'ice' ? 0x0284c7 : type === 'laser' ? 0x10b981 : 0x7c3aed;
+          gfx.fillStyle(col, 1); gfx.fillRoundedRect(2, 2, 28, 28, 6);
+          gfx.lineStyle(2, 0xffffff, 1); gfx.strokeRoundedRect(2, 2, 28, 28, 6);
+          gfx.fillStyle(0xffffff, 1); gfx.fillCircle(16, 16, 6);
+          gfx.generateTexture('crate_' + type, 32, 32);
+        });
+
+        // Princess Fallback
+        if (!this.textures.exists('princess')) {
+          gfx.clear();
+          gfx.fillStyle(0xf472b6, 1); gfx.fillRoundedRect(4, 16, 24, 30, 4);
+          gfx.fillStyle(0xfed7aa, 1); gfx.fillCircle(16, 12, 10);
+          gfx.fillStyle(0xfacc15, 1); gfx.fillTriangle(8, 6, 24, 6, 16, 0); // Crown
+          gfx.generateTexture('princess', 32, 48);
+        }
+
+        // Boss Monster Sprite
+        gfx.clear();
+        gfx.fillStyle(0x991b1b, 1); gfx.fillCircle(40, 40, 36);
+        gfx.fillStyle(0xfacc15, 1); gfx.fillRect(20, 26, 12, 12); gfx.fillRect(48, 26, 12, 12); // Eyes
+        gfx.fillStyle(0x000000, 1); gfx.fillRect(24, 30, 5, 5); gfx.fillRect(52, 30, 5, 5);
+        gfx.fillStyle(0xfef08a, 1); gfx.fillTriangle(25, 12, 35, -10, 45, 12); gfx.fillTriangle(45, 12, 55, -10, 65, 12); // Horns
+        gfx.generateTexture('boss_monster', 80, 80);
+
+        // Mushroom Bouncer
+        gfx.clear();
+        gfx.fillStyle(0xef4444, 1); gfx.fillCircle(16, 14, 14);
+        gfx.fillStyle(0xffffff, 1); gfx.fillCircle(11, 10, 3); gfx.fillCircle(21, 10, 3);
+        gfx.fillStyle(0xfef08a, 1); gfx.fillRect(12, 16, 8, 14);
+        gfx.generateTexture('mushroom', 32, 30);
+
+        // Spikes
+        gfx.clear();
+        gfx.fillStyle(0x94a3b8, 1);
+        gfx.fillTriangle(0, 24, 8, 0, 16, 24);
+        gfx.fillTriangle(16, 24, 24, 0, 32, 24);
+        gfx.generateTexture('spikes', 32, 24);
+
+        gfx.destroy();
+      }
+    }
+
+    // --- SCENE 2: MAIN 1,000-LEVEL GAMEPLAY SCENE ---
+    class GameScene extends Phaser.Scene {
+      constructor() {
+        super({ key: 'GameScene' });
+      }
+
+      create() {
+        currentGameScene = this;
+        this.zone = getZoneForLevel(gameState.currentLevel);
+        this.isBossArena = isBossLevel(gameState.currentLevel);
+
+        // Level Timer: 5 Minutes (300 seconds)
+        this.levelTimerSeconds = 300;
+        this.timerEvent = this.time.addEvent({
+          delay: 1000,
+          callback: this.tickTimer,
+          callbackScope: this,
+          loop: true
+        });
+
+        // Physics world size
+        const levelWidth = this.isBossArena ? 1600 : 2800;
+        this.physics.world.setBounds(0, 0, levelWidth, 540);
+
+        // Draw Dynamic Background
+        this.createDynamicBackground(levelWidth);
+
+        // Groups
+        this.platforms = this.physics.add.staticGroup();
+        this.hazards = this.physics.add.staticGroup();
+        this.bouncers = this.physics.add.staticGroup();
+        this.coins = this.physics.add.staticGroup();
+        this.powerUpCrates = this.physics.add.staticGroup();
+        this.enemies = this.physics.add.group();
+        this.playerBullets = this.physics.add.group();
+        this.bossBullets = this.physics.add.group();
+
+        // Build Level Obstacles & Layout
+        this.buildLevelLayout(levelWidth);
+
+        // Create Scaled Hero Character (Scaled up for high mobile visibility)
+        this.player = this.physics.add.sprite(100, 320, 'player_stand');
+        this.player.setScale(1.35); // Visibly scaled up
+        this.player.setCollideWorldBounds(true);
+        this.player.setBounce(0.05);
+        this.player.setGravityY(750);
+        this.player.body.setSize(24, 42);
+
+        this.invulnerableTimer = 0;
+        this.lastShootTime = 0;
+
+        // Colliders
+        this.physics.add.collider(this.player, this.platforms, this.handlePlatformContact, null, this);
+        this.physics.add.collider(this.enemies, this.platforms);
+        this.physics.add.overlap(this.player, this.hazards, this.handleHazardTouch, null, this);
+        this.physics.add.overlap(this.player, this.bouncers, this.handleMushroomBounce, null, this);
+        this.physics.add.overlap(this.player, this.coins, this.collectCoin, null, this);
+        this.physics.add.overlap(this.player, this.powerUpCrates, this.collectPowerUp, null, this);
+        this.physics.add.overlap(this.player, this.enemies, this.handleEnemyTouch, null, this);
+        this.physics.add.overlap(this.playerBullets, this.enemies, this.handleBulletHitEnemy, null, this);
+        this.physics.add.collider(this.playerBullets, this.platforms, (bullet) => bullet.destroy());
+
+        // Camera follow
+        this.cameras.main.setBounds(0, 0, levelWidth, 540);
+        this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+
+        // Touch & Keyboard Controls Setup
+        this.setupInputControls();
+
+        // Start BGM
+        soundSynth.startBgm();
+
+        // Update Bottom HUD
+        this.updateBottomHUD();
+      }
+
+      createDynamicBackground(levelWidth) {
+        // Gradient Sky
+        const skyGfx = this.add.graphics();
+        skyGfx.fillGradientStyle(this.zone.sky[0], this.zone.sky[0], this.zone.sky[1], this.zone.sky[1], 1);
+        skyGfx.fillRect(0, 0, levelWidth, 540);
+        skyGfx.setScrollFactor(0.2);
+
+        // Parallax Mountain Silhouettes
+        const hillsGfx = this.add.graphics();
+        hillsGfx.fillStyle(this.zone.ground, 0.25);
+        for (let x = 0; x < levelWidth; x += 320) {
+          hillsGfx.fillCircle(x + 100, 420, 140);
+          hillsGfx.fillCircle(x + 220, 460, 180);
+        }
+        hillsGfx.setScrollFactor(0.4);
+      }
+
+      buildLevelLayout(levelWidth) {
+        const seed = gameState.currentLevel * 17;
+
+        // Main Base Ground with Gaps
+        for (let x = 0; x < levelWidth; x += 350) {
+          if (x > 400 && (x / 350) % 3 === 0 && !this.isBossArena) {
+            // Gap / Pitfall with spikes underneath
+            const spike = this.hazards.create(x + 80, 520, 'spikes');
+            spike.setOrigin(0, 1);
+            continue;
+          }
+          this.createSolidPlatform(x, 480, 360, 60);
+        }
+
+        if (this.isBossArena) {
+          // Dedicated Boss Arena
+          this.createSolidPlatform(0, 0, 30, 540); // Left Barrier
+          this.createSolidPlatform(levelWidth - 30, 0, 30, 540); // Right Barrier
+
+          // Elevated Dodging Platforms
+          this.createSolidPlatform(300, 340, 160, 24);
+          this.createSolidPlatform(600, 260, 180, 24);
+          this.createSolidPlatform(950, 340, 160, 24);
+
+          // Guaranteed Power-Up Crate on Arena Platform
+          const types = ['fireball', 'laser', 'ice', 'machinegun'];
+          const chosen = types[gameState.currentLevel % types.length];
+          const crate = this.powerUpCrates.create(690, 220, 'crate_' + chosen);
+          crate.powerType = chosen;
+
+          // Spawn Advanced Boss
+          this.spawnBossMonster(levelWidth - 300, 380);
+
+          // Princess Zoe at the far end
+          this.princess = this.add.sprite(levelWidth - 100, 435, 'princess').setScale(1.3);
+          return;
+        }
+
+        // Regular Level Procedural Platforms & Obstacles
+        const numPlats = 9;
+        const pTypes = ['fireball', 'ice', 'laser', 'machinegun'];
+        for (let i = 0; i < numPlats; i++) {
+          const px = 300 + i * 260;
+          const py = 360 - ((seed + i * 37) % 160);
+          this.createSolidPlatform(px, py, 140, 22);
+
+          // Bouncing Mushroom
+          if (i % 3 === 1) {
+            const m = this.bouncers.create(px + 40, py - 15, 'mushroom');
+            m.setOrigin(0.5, 1);
+          }
+
+          // Spikes Hazard
+          if (i % 4 === 2) {
+            const spk = this.hazards.create(px + 90, py - 12, 'spikes');
+            spk.setOrigin(0.5, 1);
+          }
+
+          // Golden Coins
+          for (let c = 0; c < 3; c++) {
+            const coin = this.coins.create(px + 30 + c * 35, py - 40, 'proj_rapid');
+            coin.setScale(1.2);
+          }
+
+          // Power-Up Crate on elevated platform
+          if (i === 2 || i === 6) {
+            const pType = pTypes[(seed + i) % pTypes.length];
+            const crate = this.powerUpCrates.create(px + 70, py - 26, 'crate_' + pType);
+            crate.powerType = pType;
+          }
+
+          // Patrolling Enemies (Scaled up for visibility)
+          if (i % 2 === 0) {
+            this.spawnEnemy(px + 70, py - 30, i % 3 === 0 ? 'snail' : 'slime');
+          }
+        }
+
+        // Flying Bat in open air
+        this.spawnEnemy(1200, 200, 'bee');
+        this.spawnEnemy(2100, 180, 'bee');
+
+        // Princess Zoe at the Finish Line!
+        this.princess = this.physics.add.staticSprite(levelWidth - 120, 435, 'princess').setScale(1.35);
+        this.physics.add.overlap(this.player, this.princess, this.handleLevelComplete, null, this);
+      }
+
+      createSolidPlatform(x, y, w, h) {
+        const pGfx = this.make.graphics({ x: 0, y: 0, add: false });
+        pGfx.fillStyle(this.zone.ground, 1);
+        pGfx.fillRect(0, 0, w, h);
+        pGfx.fillStyle(this.zone.platformBorder, 1);
+        pGfx.fillRect(0, 0, w, 5); // Crisp Bright Top Border
+        const key = `plat_${x}_${y}_${w}`;
+        pGfx.generateTexture(key, w, h);
+        pGfx.destroy();
+
+        const plat = this.platforms.create(x + w / 2, y + h / 2, key);
+        plat.refreshBody();
+        return plat;
+      }
+
+      spawnEnemy(x, y, spriteKey) {
+        const tex = this.textures.exists(spriteKey) ? spriteKey : 'slime';
+        const enemy = this.enemies.create(x, y, tex);
+        enemy.setScale(1.3); // Scaled UP in size for clear visibility
+        enemy.setCollideWorldBounds(true);
+        enemy.setBounce(1);
+        enemy.setVelocityX(60);
+        enemy.enemyType = spriteKey;
+        enemy.body.setSize(26, 26);
+        if (spriteKey === 'bee') {
+          enemy.body.setAllowGravity(false);
+          enemy.baseY = y;
+        }
+      }
+
+      spawnBossMonster(x, y) {
+        this.boss = this.physics.add.sprite(x, y, 'boss_monster');
+        this.boss.setScale(1.5); // Boss scaled UP in size
+        this.boss.setCollideWorldBounds(true);
+        this.boss.setBounce(0.1);
+        this.boss.health = 50; // Visible health bar requiring 50 HITS to defeat
+        this.boss.maxHealth = 50;
+        this.boss.body.setSize(60, 60);
+
+        this.physics.add.collider(this.boss, this.platforms);
+        this.physics.add.overlap(this.player, this.boss, this.handleEnemyTouch, null, this);
+        this.physics.add.overlap(this.playerBullets, this.boss, this.handleBulletHitBoss, null, this);
+        this.physics.add.overlap(this.player, this.bossBullets, this.handleBossBulletHitPlayer, null, this);
+
+        // Boss Health Bar UI on Screen
+        this.bossHealthBarGfx = this.add.graphics().setScrollFactor(0);
+        this.updateBossHealthBar();
+
+        // Boss Jumps and Attack Timers
+        this.time.addEvent({
+          delay: 2400,
+          callback: () => {
+            if (this.boss && this.boss.active) {
+              this.boss.setVelocityY(-450);
+              this.boss.setVelocityX(Phaser.Math.Between(-160, 160));
+              soundSynth.bossAlarm();
+            }
+          },
+          loop: true
+        });
+
+        // Boss Machine-Gun & Spinning Boulders Attack Pattern
+        this.time.addEvent({
+          delay: 1500,
+          callback: this.fireBossProjectiles,
+          callbackScope: this,
+          loop: true
+        });
+      }
+
+      updateBossHealthBar() {
+        if (!this.boss || !this.boss.active || !this.bossHealthBarGfx) return;
+        this.bossHealthBarGfx.clear();
+        // Centered at screen top (subtle in game canvas)
+        const barW = 280;
+        const barH = 14;
+        const barX = (this.scale.width - barW) / 2;
+        const barY = 20;
+
+        // Container
+        this.bossHealthBarGfx.fillStyle(0x0f172a, 0.85);
+        this.bossHealthBarGfx.fillRoundedRect(barX - 4, barY - 4, barW + 8, barH + 8, 8);
+        this.bossHealthBarGfx.lineStyle(2, 0xef4444, 1);
+        this.bossHealthBarGfx.strokeRoundedRect(barX - 4, barY - 4, barW + 8, barH + 8, 8);
+
+        // Health Fill
+        const pct = Math.max(0, this.boss.health / this.boss.maxHealth);
+        this.bossHealthBarGfx.fillStyle(0xef4444, 1);
+        this.bossHealthBarGfx.fillRoundedRect(barX, barY, barW * pct, barH, 4);
+      }
+
+      fireBossProjectiles() {
+        if (!this.boss || !this.boss.active) return;
+        // 1. Spinning Boulder
+        const boulder = this.bossBullets.create(this.boss.x - 30, this.boss.y - 10, 'proj_boulder');
+        boulder.setVelocityX(-220);
+        boulder.setVelocityY(Phaser.Math.Between(-80, 80));
+        boulder.setAngularVelocity(300);
+        boulder.body.setAllowGravity(false);
+
+        // 2. Machine-gun style rapid burst
+        for (let i = 0; i < 3; i++) {
+          this.time.delayedCall(i * 120, () => {
+            if (!this.boss || !this.boss.active) return;
+            const bullet = this.bossBullets.create(this.boss.x - 20, this.boss.y + 10, 'proj_fireball');
+            bullet.setVelocityX(-320);
+            bullet.setVelocityY(Phaser.Math.Between(-40, 40));
+            bullet.body.setAllowGravity(false);
+          });
+        }
+      }
+
+      setupInputControls() {
+        // Keyboard inputs
+        this.cursors = this.input.keyboard.createCursorKeys();
+        this.keyA = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
+        this.keyD = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
+        this.keyW = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
+        this.keySpace = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+        this.keyJ = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.J);
+        this.keyF = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
+
+        // Floating Touch Controller Binding
+        this.touchLeft = false;
+        this.touchRight = false;
+        this.touchJump = false;
+
+        const btnLeft = document.getElementById('touch-left');
+        const btnRight = document.getElementById('touch-right');
+        const btnJump = document.getElementById('touch-jump');
+        const btnShoot = document.getElementById('touch-shoot');
+
+        const bindPress = (el, onDown, onUp) => {
+          if (!el) return;
+          el.addEventListener('pointerdown', (e) => { e.preventDefault(); el.classList.add('pressed'); onDown(); });
+          el.addEventListener('pointerup', (e) => { e.preventDefault(); el.classList.remove('pressed'); onUp(); });
+          el.addEventListener('pointerleave', (e) => { el.classList.remove('pressed'); onUp(); });
+          el.addEventListener('pointercancel', (e) => { el.classList.remove('pressed'); onUp(); });
+        };
+
+        bindPress(btnLeft, () => this.touchLeft = true, () => this.touchLeft = false);
+        bindPress(btnRight, () => this.touchRight = true, () => this.touchRight = false);
+        bindPress(btnJump, () => { this.touchJump = true; this.handleJumpTrigger(); }, () => this.touchJump = false);
+        bindPress(btnShoot, () => this.handleShootTrigger(), () => {});
+      }
+
+      handleJumpTrigger() {
+        if (this.player && this.player.body.touching.down) {
+          this.player.setVelocityY(-460);
+          soundSynth.jump();
+          this.spawnFloatingEffect('🔊 JUMP! 💨', this.player.x, this.player.y - 20, '#38bdf8');
+        }
+      }
+
+      handleShootTrigger() {
+        const now = this.time.now;
+        const cooldown = gameState.activePowerUp === 'machinegun' ? 140 : 280;
+        if (now - this.lastShootTime < cooldown) return;
+        this.lastShootTime = now;
+
+        const pType = gameState.activePowerUp || 'machinegun';
+        const tex = pType === 'fireball' ? 'proj_fireball' : pType === 'ice' ? 'proj_ice' : pType === 'laser' ? 'proj_laser' : 'proj_rapid';
+        
+        soundSynth.shoot(pType);
+
+        if (pType === 'laser') {
+          // Tri-Spread Laser
+          [-15, 0, 15].forEach(angle => {
+            const b = this.playerBullets.create(this.player.x + 20, this.player.y, tex);
+            b.setVelocity(480 * Math.cos(angle * Math.PI / 180), 480 * Math.sin(angle * Math.PI / 180));
+            b.body.setAllowGravity(false);
+          });
+        } else {
+          const b = this.playerBullets.create(this.player.x + 20, this.player.y, tex);
+          b.setVelocityX(450);
+          b.body.setAllowGravity(pType === 'fireball'); // Fireball bounces!
+          if (pType === 'fireball') b.setBounce(0.8);
+        }
+      }
+
+      handleMushroomBounce(player, mushroom) {
+        if (player.body.velocity.y > 0) {
+          player.setVelocityY(-620); // High Spring Jump!
+          soundSynth.jump();
+          this.spawnFloatingEffect('🍄 BOING! 🚀', player.x, player.y - 30, '#facc15');
+        }
+      }
+
+      handleHazardTouch(player, hazard) {
+        this.damagePlayer();
+      }
+
+      handleEnemyTouch(player, enemy) {
+        // If stomping on regular enemy from above:
+        if (player.body.velocity.y > 0 && player.y + 15 < enemy.y && enemy !== this.boss) {
+          player.setVelocityY(-340);
+          soundSynth.stomp();
+          this.spawnFloatingEffect('💥 STOMP! +100', enemy.x, enemy.y - 20, '#4ade80');
+          gameState.score += 100;
+          enemy.destroy();
+          this.updateBottomHUD();
+        } else {
+          this.damagePlayer();
+        }
+      }
+
+      handleBulletHitEnemy(bullet, enemy) {
+        bullet.destroy();
+        soundSynth.stomp();
+        this.spawnFloatingEffect('💥 HIT! +100', enemy.x, enemy.y - 20, '#fde047');
+        gameState.score += 100;
+        enemy.destroy();
+        this.updateBottomHUD();
+      }
+
+      handleBulletHitBoss(bullet, boss) {
+        bullet.destroy();
+        soundSynth.bossHit();
+        boss.health--;
+        this.updateBossHealthBar();
+        this.spawnFloatingEffect('💥 BOSS HIT! ' + boss.health + '/50', boss.x - 20, boss.y - 40, '#ef4444');
+
+        if (boss.health <= 0) {
+          // BOSS DEFEATED!
+          boss.destroy();
+          if (this.bossHealthBarGfx) this.bossHealthBarGfx.destroy();
+          this.triggerVictorySequence();
+        }
+      }
+
+      handleBossBulletHitPlayer(player, bullet) {
+        bullet.destroy();
+        this.damagePlayer();
+      }
+
+      collectCoin(player, coin) {
+        coin.destroy();
+        soundSynth.coin();
+        gameState.coins++;
+        gameState.score += 50;
+        this.spawnFloatingEffect('+50 🪙', coin.x, coin.y - 15, '#facc15');
+        this.updateBottomHUD();
+      }
+
+      collectPowerUp(player, crate) {
+        const newPower = crate.powerType;
+        crate.destroy();
+        soundSynth.powerup();
+
+        // Power-Up System: Permanent until replaced by another power-up type!
+        gameState.activePowerUp = newPower;
+        saveGame();
+
+        this.spawnFloatingEffect('⚡ ' + newPower.toUpperCase() + ' EQUIPPED! ⚡', player.x - 20, player.y - 40, '#c084fc');
+        this.updateBottomHUD();
+      }
+
+      damagePlayer() {
+        if (this.invulnerableTimer > 0) return;
+        this.invulnerableTimer = 60; // 1 second flash
+        soundSynth.hurt();
+        gameState.lives--;
+        this.spawnFloatingEffect('⚠️ OUCH! -1❤️', this.player.x, this.player.y - 25, '#ef4444');
+        this.updateBottomHUD();
+
+        if (gameState.lives <= 0) {
+          this.handlePlayerDeath();
+        } else {
+          this.player.setVelocityY(-260);
+          this.player.setTint(0xef4444);
+        }
+      }
+
+      handlePlayerDeath() {
+        gameState.deathCount++;
+        gameState.lives = 10; // Reset lives on respawn
+        saveGame();
+
+        // Rule: Level number and background Area Zone MUST remain strictly locked upon death
+        soundSynth.hurt();
+        
+        // Every 2 deaths triggers AdMob interstitial ad break
+        if (gameState.deathCount % 2 === 0) {
+          showInterstitialAd(() => {
+            this.scene.restart();
+          });
+        } else {
+          this.scene.restart();
+        }
+      }
+
+      triggerVictorySequence() {
+        soundSynth.victory();
+        gameState.score += 2000;
+        saveGame();
+
+        // Ben walks to Princess Zoe
+        this.player.setVelocityX(120);
+
+        // Show Next Level 3-Second Banner
+        const banner = document.getElementById('next-level-banner');
+        const bannerText = document.getElementById('next-level-text');
+        if (banner) {
+          banner.style.display = 'block';
+          if (bannerText) bannerText.textContent = `Princess Rescued! Advancing to Level ${gameState.currentLevel + 1} in 3s...`;
+        }
+
+        // 3-second seamless transition
+        this.time.delayedCall(3000, () => {
+          if (banner) banner.style.display = 'none';
+          gameState.currentLevel++;
+          if (gameState.currentLevel > gameState.highestUnlockedLevel) {
+            gameState.highestUnlockedLevel = gameState.currentLevel;
+          }
+          saveGame();
+          this.scene.restart();
+        });
+      }
+
+      handleLevelComplete(player, princess) {
+        if (this.levelCompleted) return;
+        this.levelCompleted = true;
+        this.triggerVictorySequence();
+      }
+
+      tickTimer() {
+        if (this.levelTimerSeconds > 0) {
+          this.levelTimerSeconds--;
+          this.updateBottomHUD();
+
+          // 60-second warning alert & audio alarm
+          if (this.levelTimerSeconds <= 60 && this.levelTimerSeconds > 0) {
+            if (this.levelTimerSeconds % 2 === 0) soundSynth.timerAlarm();
+          }
+
+          if (this.levelTimerSeconds === 0) {
+            // Auto dead and back to start of locked level
+            this.handlePlayerDeath();
+          }
+        }
+      }
+
+      spawnFloatingEffect(text, x, y, color) {
+        const txt = this.add.text(x, y, text, {
+          fontFamily: 'Comic Sans MS, Arial',
+          fontSize: '14px',
+          fontStyle: 'bold',
+          color: color,
+          stroke: '#000000',
+          strokeThickness: 3
+        });
+        this.tweens.add({
+          targets: txt,
+          y: y - 35,
+          alpha: 0,
+          duration: 900,
+          onComplete: () => txt.destroy()
+        });
+      }
+
+      updateBottomHUD() {
+        // Lives
+        const hudLives = document.getElementById('hud-lives');
+        if (hudLives) hudLives.textContent = `❤️ x${Math.max(0, gameState.lives)}`;
+
+        // Timer (05:00 format)
+        const hudTimer = document.getElementById('hud-timer');
+        if (hudTimer) {
+          const m = Math.floor(this.levelTimerSeconds / 60);
+          const s = this.levelTimerSeconds % 60;
+          hudTimer.textContent = `⏱️ ${(m < 10 ? '0' : '') + m}:${(s < 10 ? '0' : '') + s}`;
+          hudTimer.classList.toggle('warning', this.levelTimerSeconds <= 60);
+        }
+
+        // Active Power-Up
+        const hudPower = document.getElementById('hud-powerup');
+        const shootBtn = document.getElementById('touch-shoot');
+        const shootLabel = document.getElementById('shoot-label');
+        if (hudPower) {
+          const p = gameState.activePowerUp || 'NONE';
+          hudPower.textContent = `⚡ ${p.toUpperCase()}`;
+          if (shootBtn) {
+            shootBtn.className = 'action-circle-btn btn-shoot ' + (gameState.activePowerUp || '');
+          }
+          if (shootLabel) {
+            shootLabel.textContent = p === 'fireball' ? 'FIRE' : p === 'ice' ? 'ICE' : p === 'laser' ? 'LASER' : 'BLAST';
+          }
+        }
+
+        // Zone & Level
+        const hudZone = document.getElementById('hud-zone');
+        if (hudZone) {
+          hudZone.textContent = `LVL ${gameState.currentLevel} • ${this.zone.name}`;
+        }
+
+        // Coins & Score
+        const hudCoins = document.getElementById('hud-coins');
+        const hudScore = document.getElementById('hud-score');
+        if (hudCoins) hudCoins.textContent = `🪙 ${gameState.coins}`;
+        if (hudScore) hudScore.textContent = `⭐ ${gameState.score}`;
+      }
+
+      update() {
+        if (!this.player || !this.player.body) return;
+
+        // Invulnerability tint flash
+        if (this.invulnerableTimer > 0) {
+          this.invulnerableTimer--;
+          this.player.setAlpha(this.invulnerableTimer % 4 < 2 ? 0.3 : 1);
+          if (this.invulnerableTimer === 0) {
+            this.player.clearTint();
+            this.player.setAlpha(1);
+          }
+        }
+
+        // Horizontal Movement
+        const speed = 190;
+        const moveLeft = this.cursors.left.isDown || this.keyA.isDown || this.touchLeft;
+        const moveRight = this.cursors.right.isDown || this.keyD.isDown || this.touchRight;
+        const jumpKey = this.cursors.up.isDown || this.keyW.isDown || this.keySpace.isDown;
+        const shootKey = this.keyJ.isDown || this.keyF.isDown;
+
+        if (moveLeft) {
+          this.player.setVelocityX(-speed);
+          this.player.setFlipX(true);
+        } else if (moveRight) {
+          this.player.setVelocityX(speed);
+          this.player.setFlipX(false);
+        } else {
+          this.player.setVelocityX(0);
+        }
+
+        if (jumpKey && this.player.body.touching.down) {
+          this.handleJumpTrigger();
+        }
+
+        if (shootKey) {
+          this.handleShootTrigger();
+        }
+
+        // Enemy patrol behavior (turn around at platform edges)
+        this.enemies.children.iterate((enemy) => {
+          if (!enemy || !enemy.active) return;
+          if (enemy.enemyType === 'bee') {
+            enemy.y = enemy.baseY + Math.sin(this.time.now * 0.004) * 40;
+          }
+        });
+
+        // Pitfall bottom death check
+        if (this.player.y > 520) {
+          this.handlePlayerDeath();
+        }
+      }
+    }
+
+    // --- INITIALIZE PHASER 3 CONFIGURATION (Strict 16:9 Landscape) ---
+    window.addEventListener('DOMContentLoaded', () => {
+      const config = {
+        type: Phaser.AUTO,
+        parent: 'phaser-game-canvas',
+        width: 960,
+        height: 540,
+        scale: {
+          mode: Phaser.Scale.FIT,
+          autoCenter: Phaser.Scale.CENTER_BOTH
+        },
+        physics: {
+          default: 'arcade',
+          arcade: {
+            gravity: { y: 0 },
+            debug: false
+          }
+        },
+        scene: [BootScene, GameScene]
+      };
+
+      gameInstance = new Phaser.Game(config);
+    });
+
+    // --- UI DASHBOARD & MODAL HANDLERS ---
+    function openDashboard() {
+      if (gameInstance) gameInstance.scene.pause('GameScene');
+      const d = document.getElementById('screen-dashboard');
+      if (d) d.classList.add('active');
+
+      document.getElementById('dash-current-level').textContent = `Level ${gameState.currentLevel} (${getZoneForLevel(gameState.currentLevel).name})`;
+      document.getElementById('dash-highest-level').textContent = `Level ${gameState.highestUnlockedLevel}`;
+      document.getElementById('dash-powerup').textContent = gameState.activePowerUp ? gameState.activePowerUp.toUpperCase() : 'None';
+    }
+
+    function resumeGame() {
+      const d = document.getElementById('screen-dashboard');
+      if (d) d.classList.remove('active');
+      if (gameInstance) gameInstance.scene.resume('GameScene');
+    }
+
+    function toggleMuteAudio() {
+      soundSynth.muted = !soundSynth.muted;
+      const btn = document.getElementById('dash-mute-btn');
+      if (btn) btn.textContent = soundSynth.muted ? "🔇 Sound Effects: OFF" : "🔊 Sound Effects: ON";
+      if (soundSynth.muted) soundSynth.stopBgm();
+      else soundSynth.startBgm();
+    }
+
+    function openApkModal() {
+      soundSynth.jump();
+      const m = document.getElementById('apk-modal');
+      if (m) m.classList.add('active');
+    }
+
+    function closeApkModal() {
+      const m = document.getElementById('apk-modal');
+      if (m) m.classList.remove('active');
+    }
+
+    // Interstitial Ad with 3-Second Break
+    let interstitialCallback = null;
+    let interstitialTimerInterval = null;
+
+    function showInterstitialAd(onClosed) {
+      interstitialCallback = onClosed;
+      if (gameInstance) gameInstance.scene.pause('GameScene');
+
+      const modal = document.getElementById('interstitial-modal');
+      const countEl = document.getElementById('interstitial-timer');
+      const closeBtn = document.getElementById('interstitial-close-btn');
+
+      if (modal) modal.style.display = 'flex';
+      if (closeBtn) closeBtn.style.display = 'none';
+
+      let seconds = 3;
+      if (countEl) countEl.textContent = seconds;
+
+      if (interstitialTimerInterval) clearInterval(interstitialTimerInterval);
+      interstitialTimerInterval = setInterval(() => {
+        seconds--;
+        if (countEl) countEl.textContent = seconds;
+        if (seconds <= 0) {
+          clearInterval(interstitialTimerInterval);
+          closeInterstitial();
+        }
+      }, 1000);
+    }
+
+    function closeInterstitial() {
+      if (interstitialTimerInterval) clearInterval(interstitialTimerInterval);
+      const modal = document.getElementById('interstitial-modal');
+      if (modal) modal.style.display = 'none';
+      if (gameInstance) gameInstance.scene.resume('GameScene');
+      if (typeof interstitialCallback === 'function') {
+        const cb = interstitialCallback;
+        interstitialCallback = null;
+        cb();
+      }
+    }
+  </script>
+</body>
+</html>
